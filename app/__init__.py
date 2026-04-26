@@ -10,6 +10,11 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    import os
+    # Ensure instance and upload directories exist
+    os.makedirs(app.instance_path, exist_ok=True)
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
     db.init_app(app)
     socketio.init_app(app)
 
