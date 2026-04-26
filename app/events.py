@@ -1,0 +1,111 @@
+from flask_socketio import emit, join_room, leave_room
+from . import socketio, db
+from .models import Flag
+from flask import request
+
+@socketio.on('join')
+def on_join(data):
+    room = data['session_id']
+    join_room(room)
+    # Send existing flags to the user who just joined
+    flags = Flag.query.filter_by(session_id=room).all()
+    flags_data = [{
+        'id': f.id,
+        'region_id': f.region_id,
+        'x': f.x,
+        'y': f.y,
+        'text_content': f.text_content,
+        'file_path': f.file_path,
+        'thumbnail_path': f.thumbnail_path,
+        'author_name': f.author_name,
+        'client_id': f.client_id
+    } for f in flags]
+    emit('load_flags', flags_data, to=request.sid)
+
+@socketio.on('leave')
+def on_leave(data):
+    room = data['session_id']
+    leave_room(room)
+
+@socketio.on('add_flag')
+def on_add_flag(data):
+    session_id = data.get('session_id')
+    region_id = data.get('region_id')
+    x = data.get('x')
+    y = data.get('y')
+    text_content = data.get('text_content')
+    file_path = data.get('file_path')
+    thumbnail_path = data.get('thumbnail_path')
+    author_name = data.get('author_name', 'Participant')
+    client_id = data.get('client_id')
+
+    new_flag = Flag(
+        session_id=session_id,
+        region_id=region_id,
+        x=x,
+        y=y,
+        text_content=text_content,
+        file_path=file_path,
+        thumbnail_path=thumbnail_path,
+        author_name=author_name,
+        client_id=client_id
+    )
+    db.session.add(new_flag)
+    db.session.commit()
+
+    flag_data = {
+        'id': new_flag.id,
+        'region_id': new_flag.region_id,
+        'x': new_flag.x,
+        'y': new_flag.y,
+        'text_content': new_flag.text_content,
+        'file_path': new_flag.file_path,
+        'thumbnail_path': new_flag.thumbnail_path,
+        'author_name': new_flag.author_name,
+        'client_id': new_flag.client_id
+    }
+    
+    # Broadcast to everyone in the room (session)
+    emit('new_flag', flag_data, room=session_id)
+
+@socketio.on('edit_flag')
+def on_edit_flag(data):
+    session_id = data.get('session_id')
+    flag_id = data.get('flag_id')
+    
+    flag = Flag.query.get(flag_id)
+    if flag:
+        flag.text_content = data.get('text_content', flag.text_content)
+        
+        # If new file is uploaded, update paths
+        if 'file_path' in data:
+            flag.file_path = data.get('file_path')
+            flag.thumbnail_path = data.get('thumbnail_path')
+            
+        db.session.commit()
+        
+        flag_data = {
+            'id': flag.id,
+            'region_id': flag.region_id,
+            'x': flag.x,
+            'y': flag.y,
+            'text_content': flag.text_content,
+            'file_path': flag.file_path,
+            'thumbnail_path': flag.thumbnail_path,
+            'author_name': flag.author_name,
+            'client_id': flag.client_id
+        }
+        
+        emit('flag_edited', flag_data, room=session_id)
+
+@socketio.on('delete_flag')
+def on_delete_flag(data):
+    session_id = data.get('session_id')
+    flag_id = data.get('flag_id')
+    
+    flag = Flag.query.get(flag_id)
+    if flag:
+        db.session.delete(flag)
+        db.session.commit()
+        
+        emit('flag_deleted', {'id': flag_id, 'session_id': session_id}, room=session_id)

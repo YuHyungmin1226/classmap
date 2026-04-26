@@ -1,0 +1,521 @@
+{% extends "base.html" %}
+
+{% block head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    #map { width: 100%; height: 70vh; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; z-index: 1; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 450px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
+    .map-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    
+    /* Carousel styles for multiple flags */
+    .flag-carousel-item { display: none; }
+    .flag-carousel-item.active { display: block; }
+    .carousel-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+    .carousel-controls button { padding: 5px 10px; cursor: pointer; border: none; background: #e2e8f0; border-radius: 4px; }
+    .carousel-controls button:hover { background: #cbd5e1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="map-header">
+    <h2>Session: {{ map_session.name }}</h2>
+    <div class="controls">
+        <input type="text" id="nickname" class="form-control" placeholder="Your Name (Optional)" value="{{ 'Admin' if is_admin else '' }}" {{ 'disabled' if is_admin else '' }}>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<!-- Add/Edit Flag Modal -->
+<div id="flagModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle">Add Note</h3>
+        <p class="text-muted" style="font-size: 0.8rem;">Location: <span id="displayCoords"></span></p>
+        <form id="flagForm">
+            <input type="hidden" id="coordLat">
+            <input type="hidden" id="coordLng">
+            <input type="hidden" id="editFlagId">
+            <div class="form-group">
+                <label>Text</label>
+                <textarea id="textContent" class="form-control" rows="3" placeholder="Write something or paste a YouTube link..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Attach File (Optional, replaces existing if editing)</label>
+                <input type="file" id="fileInput" class="form-control" accept="image/*,video/mp4,video/webm,video/quicktime">
+            </div>
+            
+            <!-- Live Preview Container -->
+            <div id="mediaPreviewContainer" style="display: none; margin-bottom: 15px; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 8px; text-align: center;">
+                <p style="font-size: 0.8rem; color: #64748b; margin-top: 0; margin-bottom: 8px;">Preview</p>
+                <div id="mediaPreviewContent"></div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="submitFlagBtn">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Info Modal for viewing flags -->
+<div id="infoModal" class="modal">
+    <div class="modal-content">
+        <h3>Location Notes</h3>
+        <div id="carouselContainer">
+            <!-- Flags will be injected here -->
+        </div>
+        <div class="carousel-controls" id="carouselControls" style="display: none;">
+            <button type="button" onclick="prevFlag()">Previous</button>
+            <span id="carouselIndicator">1 / 1</span>
+            <button type="button" onclick="nextFlag()">Next</button>
+        </div>
+        <div style="margin-top: 15px; text-align: right;">
+            <button type="button" class="btn btn-secondary" onclick="closeInfoModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.js"></script>
+<script>
+    const sessionId = "{{ map_session.id }}";
+    const socket = io();
+    let map;
+    
+    // Authorization: Client ID
+    let clientId = localStorage.getItem('classroom_client_id');
+    if (!clientId) {
+        clientId = 'client_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('classroom_client_id', clientId);
+    }
+    const isAdmin = "{{ is_admin }}" === "True";
+    
+    // We group flags by coordinate grouping.
+    const flagGroups = {};
+    const markers = {};
+    
+    // Carousel state
+    let currentCarouselFlags = [];
+    let currentCarouselIndex = 0;
+
+    // Media Preview Logic
+    function getYouTubeId(url) {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    function updatePreview() {
+        const previewContainer = document.getElementById('mediaPreviewContainer');
+        const previewContent = document.getElementById('mediaPreviewContent');
+        const textVal = document.getElementById('textContent').value;
+        const fileInput = document.getElementById('fileInput');
+
+        previewContent.innerHTML = '';
+        previewContainer.style.display = 'none';
+
+        // 1. File preview takes precedence
+        if (fileInput.files && fileInput.files[0]) {
+            const file = fileInput.files[0];
+            const fileUrl = URL.createObjectURL(file);
+            
+            if (file.type.startsWith('image/')) {
+                previewContent.innerHTML = `<img src="${fileUrl}" style="max-width: 100%; max-height: 200px; border-radius: 4px;">`;
+                previewContainer.style.display = 'block';
+                return;
+            } else if (file.type.startsWith('video/')) {
+                previewContent.innerHTML = `<video controls src="${fileUrl}" style="max-width: 100%; max-height: 200px; border-radius: 4px; background: #000;"></video>`;
+                previewContainer.style.display = 'block';
+                return;
+            }
+        }
+
+        // 2. YouTube preview
+        if (textVal) {
+            const words = textVal.split(/\s+/);
+            for (let word of words) {
+                const ytId = getYouTubeId(word);
+                if (ytId) {
+                    previewContent.innerHTML = `
+                    <div style="position: relative; width: 100%; padding-bottom: 56.25%; height: 0; border-radius: 4px; overflow: hidden; margin-top: 10px;">
+                        <iframe src="https://www.youtube.com/embed/${ytId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen></iframe>
+                    </div>`;
+                    previewContainer.style.display = 'block';
+                    return;
+                }
+            }
+        }
+    }
+
+    document.getElementById('textContent').addEventListener('input', updatePreview);
+    document.getElementById('fileInput').addEventListener('change', updatePreview);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize Leaflet Map
+        map = L.map('map').setView([20, 0], 2);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Attempt to center map by IP roughly
+        fetch('http://ip-api.com/json/')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    map.setView([data.lat, data.lon], 12);
+                }
+            })
+            .catch(err => console.log("IP geolocation failed", err));
+
+        // Add 'My Location' Control
+        const locateControl = L.control({position: 'topright'});
+        locateControl.onAdd = function (map) {
+            const btn = L.DomUtil.create('button', 'btn btn-secondary');
+            btn.innerHTML = '📍 My Location';
+            btn.style.margin = '10px';
+            btn.style.background = 'white';
+            btn.style.border = '2px solid rgba(0,0,0,0.2)';
+            btn.style.borderRadius = '4px';
+            btn.style.padding = '5px 10px';
+            btn.style.cursor = 'pointer';
+            btn.style.fontWeight = 'bold';
+            
+            btn.onmouseover = () => btn.style.background = '#f4f4f4';
+            btn.onmouseout = () => btn.style.background = 'white';
+
+            L.DomEvent.disableClickPropagation(btn);
+            
+            btn.onclick = function(e) {
+                e.preventDefault();
+                map.locate({setView: true, maxZoom: 16});
+            };
+            return btn;
+        };
+        locateControl.addTo(map);
+
+        map.on('locationerror', function(e) {
+            alert("Could not access your location. Please ensure location permissions are granted.");
+        });
+
+        // Map Click Event -> Open Add Note modal
+        map.on('click', function(e) {
+            openModal(e.latlng.lat, e.latlng.lng);
+        });
+
+        // Join Socket.io room
+        socket.emit('join', {session_id: sessionId});
+
+        socket.on('load_flags', function(flags) {
+            flags.forEach(f => {
+                if(f.x !== null && f.y !== null) {
+                    addFlagToMap(f);
+                }
+            });
+        });
+
+        socket.on('new_flag', function(flag) {
+            if(flag.x !== null && flag.y !== null) {
+                addFlagToMap(flag);
+            }
+        });
+        
+        socket.on('flag_edited', function(updatedFlag) {
+            const key = getGroupKey(parseFloat(updatedFlag.x), parseFloat(updatedFlag.y));
+            if (flagGroups[key]) {
+                const idx = flagGroups[key].findIndex(f => f.id === updatedFlag.id);
+                if (idx !== -1) {
+                    flagGroups[key][idx] = updatedFlag;
+                    if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
+                        renderCarousel();
+                    }
+                }
+            }
+        });
+        
+        socket.on('flag_deleted', function(data) {
+            const flagId = data.id;
+            for (const key in flagGroups) {
+                const idx = flagGroups[key].findIndex(f => f.id === flagId);
+                if (idx !== -1) {
+                    flagGroups[key].splice(idx, 1);
+                    // Remove marker if no flags left
+                    if (flagGroups[key].length === 0) {
+                        map.removeLayer(markers[key]);
+                        delete markers[key];
+                        
+                        if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
+                            closeInfoModal();
+                        }
+                        
+                        delete flagGroups[key];
+                    } else {
+                        if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
+                            if (currentCarouselIndex >= flagGroups[key].length) {
+                                currentCarouselIndex = flagGroups[key].length - 1;
+                            }
+                            renderCarousel();
+                        }
+                    }
+                    break;
+                }
+            }
+        });
+    });
+
+    function getGroupKey(lat, lng) {
+        return `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    }
+
+    function addFlagToMap(flag) {
+        const lat = parseFloat(flag.x);
+        const lng = parseFloat(flag.y);
+        const key = getGroupKey(lat, lng);
+
+        if (!flagGroups[key]) {
+            flagGroups[key] = [];
+        }
+        flagGroups[key].push(flag);
+
+        if (!markers[key]) {
+            const marker = L.marker([lat, lng]).addTo(map);
+            marker.on('click', function() {
+                openInfoModal(key);
+            });
+            markers[key] = marker;
+        } else {
+            if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
+                renderCarousel();
+            }
+        }
+    }
+
+    // Modals
+    function openModal(lat, lng) {
+        document.getElementById('modalTitle').innerText = 'Add Note';
+        document.getElementById('editFlagId').value = '';
+        document.getElementById('coordLat').value = lat;
+        document.getElementById('coordLng').value = lng;
+        document.getElementById('displayCoords').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        if (!isAdmin) document.getElementById('nickname').disabled = false;
+        document.getElementById('flagModal').style.display = 'flex';
+    }
+
+    function openEditModal(flagId) {
+        let flagToEdit = null;
+        for (const key in flagGroups) {
+            const found = flagGroups[key].find(f => f.id === flagId);
+            if (found) { flagToEdit = found; break; }
+        }
+        if (!flagToEdit) return;
+
+        closeInfoModal();
+
+        document.getElementById('modalTitle').innerText = 'Edit Note';
+        document.getElementById('editFlagId').value = flagToEdit.id;
+        document.getElementById('coordLat').value = flagToEdit.x;
+        document.getElementById('coordLng').value = flagToEdit.y;
+        document.getElementById('displayCoords').innerText = `${parseFloat(flagToEdit.x).toFixed(4)}, ${parseFloat(flagToEdit.y).toFixed(4)}`;
+        document.getElementById('textContent').value = flagToEdit.text_content || '';
+        document.getElementById('nickname').value = flagToEdit.author_name;
+        
+        if (!isAdmin) document.getElementById('nickname').disabled = true;
+
+        updatePreview();
+        document.getElementById('flagModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('flagModal').style.display = 'none';
+        document.getElementById('flagForm').reset();
+        document.getElementById('editFlagId').value = '';
+        document.getElementById('mediaPreviewContainer').style.display = 'none';
+        document.getElementById('mediaPreviewContent').innerHTML = '';
+        if (!isAdmin) document.getElementById('nickname').disabled = false;
+    }
+
+    function openInfoModal(groupKey) {
+        currentCarouselFlags = flagGroups[groupKey];
+        currentCarouselIndex = 0;
+        
+        renderCarousel();
+        document.getElementById('infoModal').style.display = 'flex';
+    }
+
+    function closeInfoModal() {
+        document.getElementById('infoModal').style.display = 'none';
+    }
+    
+    function deleteFlag(flagId) {
+        if (confirm("Are you sure you want to delete this note?")) {
+            socket.emit('delete_flag', { session_id: sessionId, flag_id: flagId });
+        }
+    }
+
+    // Carousel logic
+    function renderCarousel() {
+        const container = document.getElementById('carouselContainer');
+        container.innerHTML = '';
+        
+        if (currentCarouselFlags.length === 0) return;
+
+        currentCarouselFlags.forEach((flagData, index) => {
+            const div = document.createElement('div');
+            div.className = `flag-carousel-item ${index === currentCarouselIndex ? 'active' : ''}`;
+            
+            let timeStr = flagData.created_at ? new Date(flagData.created_at).toLocaleString() : 'Just now';
+            
+            // Authorization for Edit/Delete
+            const isOwner = flagData.client_id === clientId;
+            const canEdit = isAdmin || isOwner;
+            
+            let html = `<div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 15px;">
+                <h4 style="margin: 0;">${flagData.author_name} <br><small class="text-muted" style="font-size:0.7em;">${timeStr}</small></h4>`;
+                
+            if (canEdit) {
+                html += `
+                <div style="display: flex; gap: 5px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openEditModal(${flagData.id})" style="padding: 4px 8px; font-size: 0.8em; margin: 0;">Edit</button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteFlag(${flagData.id})" style="padding: 4px 8px; font-size: 0.8em; margin: 0;">Delete</button>
+                </div>`;
+            }
+            html += `</div>`;
+            
+            // Extract YT links
+            let parsedText = flagData.text_content || '';
+            let ytIdForView = null;
+            if (parsedText) {
+                const words = parsedText.split(/\s+/);
+                for (let word of words) {
+                    if (!ytIdForView) ytIdForView = getYouTubeId(word);
+                }
+            }
+
+            html += `<p style="white-space: pre-wrap; font-size: 0.95em;">${parsedText}</p>`;
+            
+            // Attached file handling
+            if (flagData.file_path) {
+                const ext = flagData.file_path.split('.').pop().toLowerCase();
+                const imageExts = ['png', 'jpg', 'jpeg', 'gif'];
+                const videoExts = ['mp4', 'webm', 'mov'];
+                
+                if (imageExts.includes(ext)) {
+                    html += `<a href="/${flagData.file_path}" target="_blank"><img src="/${flagData.file_path}" style="max-width: 100%; border-radius: 4px; margin-top: 10px;"></a>`;
+                } else if (videoExts.includes(ext)) {
+                    html += `<video controls src="/${flagData.file_path}" style="max-width: 100%; max-height: 300px; border-radius: 4px; margin-top: 10px; width: 100%; background: #000;"></video>`;
+                } else {
+                    html += `<a href="/${flagData.file_path}" target="_blank" class="btn btn-secondary btn-sm" style="display:inline-block; margin-top:10px; text-decoration:none;">📄 View Attached Document</a>`;
+                }
+            }
+            
+            // YouTube player
+            if (ytIdForView) {
+                html += `
+                <div style="margin-top: 15px; position: relative; width: 100%; padding-bottom: 56.25%; height: 0; border-radius: 4px; overflow: hidden;">
+                    <iframe src="https://www.youtube.com/embed/${ytIdForView}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>`;
+            }
+            
+            div.innerHTML = html;
+            container.appendChild(div);
+        });
+
+        const controls = document.getElementById('carouselControls');
+        if (currentCarouselFlags.length > 1) {
+            controls.style.display = 'flex';
+            document.getElementById('carouselIndicator').innerText = `${currentCarouselIndex + 1} / ${currentCarouselFlags.length}`;
+        } else {
+            controls.style.display = 'none';
+        }
+    }
+
+    function prevFlag() {
+        if (currentCarouselIndex > 0) {
+            currentCarouselIndex--;
+            renderCarousel();
+        }
+    }
+
+    function nextFlag() {
+        if (currentCarouselIndex < currentCarouselFlags.length - 1) {
+            currentCarouselIndex++;
+            renderCarousel();
+        }
+    }
+
+    // Submit (Add or Edit)
+    document.getElementById('flagForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitFlagBtn');
+        btn.disabled = true;
+        btn.innerText = 'Saving...';
+
+        const lat = document.getElementById('coordLat').value;
+        const lng = document.getElementById('coordLng').value;
+        const textContent = document.getElementById('textContent').value;
+        const fileInput = document.getElementById('fileInput');
+        let authorName = document.getElementById('nickname').value || 'Participant';
+        const editId = document.getElementById('editFlagId').value;
+
+        let file_path = null;
+        let thumbnail_path = null;
+        let fileUploaded = false;
+
+        if (fileInput.files.length > 0) {
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    file_path = data.file_path;
+                    thumbnail_path = data.thumbnail_path;
+                    fileUploaded = true;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("File upload failed.");
+                btn.disabled = false;
+                btn.innerText = 'Save';
+                return;
+            }
+        }
+
+        const payload = {
+            session_id: sessionId,
+            region_id: 'pin',
+            x: lat,
+            y: lng,
+            text_content: textContent,
+            author_name: authorName,
+            client_id: clientId
+        };
+
+        // Only include file paths if a new file was uploaded, so we don't accidentally overwrite existing on edit
+        if (fileUploaded) {
+            payload.file_path = file_path;
+            payload.thumbnail_path = thumbnail_path;
+        }
+
+        if (editId) {
+            payload.flag_id = editId;
+            socket.emit('edit_flag', payload);
+        } else {
+            socket.emit('add_flag', payload);
+        }
+
+        closeModal();
+        btn.disabled = false;
+        btn.innerText = 'Save';
+    });
+</script>
+{% endblock %}

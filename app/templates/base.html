@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Map App</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            {% if session.get('admin_logged_in') %}
+                <a href="{{ url_for('main.admin_dashboard') }}" class="brand">🌍 ClassMap</a>
+            {% else %}
+                <a href="/" class="brand">🌍 ClassMap</a>
+            {% endif %}
+            <div class="nav-links">
+                {% if session.get('admin_logged_in') %}
+                    <a href="{{ url_for('main.admin_dashboard') }}" class="btn-text">Dashboard</a>
+                    <a href="{{ url_for('main.admin_settings') }}" class="btn-text">Admin Menu</a>
+                    <a href="{{ url_for('main.admin_logout') }}" class="btn-text">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('main.admin_login') }}" class="btn-text">Admin Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="alert">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
