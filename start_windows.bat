@@ -46,7 +46,7 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5555 ^| findstr LISTENING') 
 )
 
 :: 4. Launch Application
-echo 🚀 Launching Application...
+echo [*] Launching Application...
 echo ========================================
 "%PYTHON_EXE%" run.py
 
