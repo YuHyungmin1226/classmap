@@ -11,14 +11,18 @@
 
 <div class="sessions-container">
     {% if sessions %}
-        <div class="grid">
-        {% for s in sessions %}
-            <div class="card session-card">
-                <h3>{{ s.name }}</h3>
-                <p>Status: <span class="badge active">Active</span></p>
-                <a href="{{ url_for('main.view_session', session_id=s.id) }}" class="btn btn-primary">Join Session</a>
-            </div>
-        {% endfor %}
+        <div class="card" style="width: 100%; border: none; box-shadow: none; background: transparent; padding: 0;">
+            <ul class="session-list" style="list-style: none; padding: 0; margin: 0;">
+            {% for s in sessions %}
+                <li class="session-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div>
+                        <h3 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25em;">{{ s.name }}</h3>
+                        <p style="margin: 0; color: #64748b; font-size: 0.9em;">Status: <span class="badge active" style="font-size: 0.85em;">Active</span></p>
+                    </div>
+                    <a href="{{ url_for('main.view_session', session_id=s.id) }}" class="btn btn-primary" style="margin: 0; display: flex; align-items: center; justify-content: center;">Join Session</a>
+                </li>
+            {% endfor %}
+            </ul>
         </div>
     {% else %}
         <div class="empty-state card">

@@ -30,15 +30,20 @@ def get_all_local_ips():
 
 app = create_app()
 
+import os
+
 if __name__ == '__main__':
-    local_ips = get_all_local_ips()
-    print("="*60)
-    print("🚀 Server is running!")
-    print(f"👉 Local Access (Teacher):   http://localhost:5555")
-    
-    for i, ip in enumerate(local_ips):
-        print(f"👉 Network Access (Students {i+1}): http://{ip}:5555")
+    # Print only in the main worker process to avoid duplicating the message
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        local_ips = get_all_local_ips()
+        print("="*60)
+        print("🚀 Server is running!")
+        print(f"👉 Local Access (Teacher):   http://localhost:5555")
         
-    print("   (Share the correct Network Access link with your students)")
-    print("="*60)
+        for i, ip in enumerate(local_ips):
+            print(f"👉 Network Access (Students {i+1}): http://{ip}:5555")
+            
+        print("   (Share the correct Network Access link with your students)")
+        print("="*60)
+        
     socketio.run(app, debug=True, host='0.0.0.0', port=5555, use_reloader=True)
