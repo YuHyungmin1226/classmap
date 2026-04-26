@@ -10,7 +10,19 @@ ClassMap is a real-time, interactive map application designed for classroom sess
 - **Permissions**: Authors can edit and delete their own notes, while Administrators retain full moderation control.
 - **Responsive UI**: Built with a sleek, modern, mobile-friendly interface using Leaflet.js.
 
-## Installation & Setup
+### 🚀 Quick Start (Recommended)
+
+#### For Windows Users:
+Just double-click **`start_windows.bat`**. 
+- It will automatically set up a portable Python environment and install all dependencies. No pre-installed Python required!
+
+#### For macOS Users:
+Run **`start_mac.command`**.
+- It will set up the virtual environment and launch the server.
+
+---
+
+### Manual Installation (Optional)
 
 1. **Clone the repository:**
    ```bash
@@ -18,15 +30,13 @@ ClassMap is a real-time, interactive map application designed for classroom sess
    cd classmap
    ```
 
-2. **Create a virtual environment and install dependencies:**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
+2. **Setup environment:**
+   - **Windows**: `python -m venv venv` & `venv\Scripts\activate`
+   - **macOS/Linux**: `python3 -m venv venv` & `source venv/bin/activate`
 
-3. **Run the application:**
+3. **Install dependencies & Run:**
    ```bash
+   pip install -r requirements.txt
    python run.py
    ```
    The server will start on `http://localhost:5555`. 

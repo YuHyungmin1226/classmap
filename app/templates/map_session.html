@@ -94,6 +94,17 @@
     }
     const isAdmin = "{{ is_admin }}" === "True";
     
+    // Helper to prevent XSS
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str.toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+    
     // We group flags by coordinate grouping.
     const flagGroups = {};
     const markers = {};
@@ -374,8 +385,9 @@
             const isOwner = flagData.client_id === clientId;
             const canEdit = isAdmin || isOwner;
             
+            let safeAuthorName = escapeHTML(flagData.author_name);
             let html = `<div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 15px;">
-                <h4 style="margin: 0;">${flagData.author_name} <br><small class="text-muted" style="font-size:0.7em;">${timeStr}</small></h4>`;
+                <h4 style="margin: 0;">${safeAuthorName} <br><small class="text-muted" style="font-size:0.7em;">${timeStr}</small></h4>`;
                 
             if (canEdit) {
                 html += `
@@ -396,7 +408,8 @@
                 }
             }
 
-            html += `<p style="white-space: pre-wrap; font-size: 0.95em;">${parsedText}</p>`;
+            let safeParsedText = escapeHTML(parsedText);
+            html += `<p style="white-space: pre-wrap; font-size: 0.95em;">${safeParsedText}</p>`;
             
             // Attached file handling
             if (flagData.file_path) {
