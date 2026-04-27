@@ -402,14 +402,33 @@
 
         let html = `<div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">`;
         
-        // Add image preview if exists
+        // Find best preview image
+        let previewUrl = null;
+        
+        // 1. Try file attachment or thumbnail
         let previewPath = latestFlag.thumbnail_path || latestFlag.file_path;
         if (previewPath) {
             const ext = previewPath.split('.').pop().toLowerCase();
             const imageExts = ['png', 'jpg', 'jpeg', 'gif'];
             if (imageExts.includes(ext)) {
-                html += `<img src="/${previewPath}" style="width: 100%; max-width: 100px; height: auto; border-radius: 4px; display: block;">`;
+                previewUrl = `/${previewPath}`;
             }
+        }
+        
+        // 2. Try YouTube thumbnail if no file preview
+        if (!previewUrl && latestFlag.text_content) {
+            const words = latestFlag.text_content.split(/\s+/);
+            for (let word of words) {
+                const ytId = getYouTubeId(word);
+                if (ytId) {
+                    previewUrl = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+                    break;
+                }
+            }
+        }
+        
+        if (previewUrl) {
+            html += `<img src="${previewUrl}" style="width: 100%; max-width: 100px; height: auto; border-radius: 4px; display: block;">`;
         }
         
         html += `<span style="word-break: break-all;">${escapeHTML(text)}</span></div>`;
