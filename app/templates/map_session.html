@@ -21,6 +21,7 @@
         font-weight: 600 !important;
         max-width: 120px;
         text-align: center;
+        pointer-events: none;
     }
     .leaflet-tooltip-top:before { border-top-color: #cbd5e1 !important; }
 
@@ -370,9 +371,17 @@
             // Bring to front on hover
             marker.on('mouseover', function() {
                 this.setZIndexOffset(1000);
+                const tooltip = this.getTooltip();
+                if (tooltip && tooltip.getElement()) {
+                    tooltip.getElement().style.zIndex = 1000;
+                }
             });
             marker.on('mouseout', function() {
                 this.setZIndexOffset(0);
+                const tooltip = this.getTooltip();
+                if (tooltip && tooltip.getElement()) {
+                    tooltip.getElement().style.zIndex = "";
+                }
             });
             
             markers[key] = marker;
