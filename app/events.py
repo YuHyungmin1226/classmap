@@ -1,7 +1,7 @@
 from flask_socketio import emit, join_room, leave_room
 from . import socketio, db
 from .models import Flag
-from flask import request
+from flask import request, session
 
 @socketio.on('join')
 def on_join(data):
@@ -75,6 +75,14 @@ def on_edit_flag(data):
     
     flag = Flag.query.get(flag_id)
     if flag:
+        # Authorization check: Admin or the person who created the flag
+        is_admin = session.get('admin_logged_in', False)
+        requester_client_id = data.get('client_id')
+        
+        if not is_admin and flag.client_id != requester_client_id:
+            print(f"Unauthorized edit attempt for flag {flag_id} by client {requester_client_id}")
+            return
+            
         flag.text_content = data.get('text_content', flag.text_content)
         
         # If new file is uploaded, update paths
@@ -105,6 +113,14 @@ def on_delete_flag(data):
     
     flag = Flag.query.get(flag_id)
     if flag:
+        # Authorization check: Admin or the person who created the flag
+        is_admin = session.get('admin_logged_in', False)
+        requester_client_id = data.get('client_id')
+        
+        if not is_admin and flag.client_id != requester_client_id:
+            print(f"Unauthorized delete attempt for flag {flag_id} by client {requester_client_id}")
+            return
+
         db.session.delete(flag)
         db.session.commit()
         
