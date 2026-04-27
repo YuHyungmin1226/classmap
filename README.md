@@ -1,14 +1,17 @@
-# ClassMap (Classroom Map Application)
+# ClassMap & ClassWrite (Classroom Collaboration Platform)
 
-ClassMap is a real-time, interactive map application designed for classroom sessions. It allows an administrator to manage classes and map sessions, while participants can collaboratively drop pins, upload media (images and videos), share YouTube links, and write notes on a shared map in real-time.
+Classroom Portal is a real-time, interactive collaboration platform designed for classroom sessions. It provides two distinct modes to suit different activities:
+- **ClassMap**: A map-based activity where participants drop pins and notes on a shared map.
+- **ClassWrite**: A board-based activity where participants share thoughts in a structured post-list format.
 
 ## Features
-- **Real-time Map Collaboration**: Synchronize pins and notes across all clients instantly using Socket.IO.
-- **Media Uploads**: Attach images and videos to map pins with inline preview and playback.
-- **YouTube Integration**: Simply paste a YouTube URL into a note to automatically embed the video player.
-- **Hierarchy Management**: Administrators can create Classes, and within each Class, create multiple active Sessions.
-- **Permissions**: Authors can edit and delete their own notes, while Administrators retain full moderation control.
-- **Responsive UI**: Built with a sleek, modern, mobile-friendly interface using Leaflet.js.
+- **Real-time Collaboration**: Synchronize pins, notes, and posts across all clients instantly using Socket.IO.
+- **Dual Activity Modes**: Choose between a Map view for spatial activities or a Board view for discussions and sharing.
+- **Media Uploads**: Attach images and videos to your contributions with inline preview and playback.
+- **YouTube Integration**: Paste a YouTube URL to automatically embed the video player in your note or post.
+- **Hierarchy Management**: Administrators can manage multiple Classes, each containing separate active Sessions.
+- **Unified UI**: A sleek, modern interface with a consistent header system and responsive design across all views.
+- **Easy Network Access**: The server automatically detects local IPs, making it easy for students to join via their mobile devices on the same Wi-Fi.
 
 ### 🚀 Quick Start (Recommended)
 
@@ -42,12 +45,12 @@ Run **`start_mac.command`**.
    The server will start on `http://localhost:5555`. 
 
 4. **Admin Access:**
-   Navigate to `/admin/login`. Default credentials:
+   Navigate to `/admin/login` (or select Admin via the portal). Default credentials:
    - Password: `admin123`
    (Note: You should change this in the Admin Menu after logging in.)
 
 ## Technologies Used
 - **Backend**: Python, Flask, Flask-SocketIO, Flask-SQLAlchemy (SQLite)
-- **Frontend**: HTML5, Vanilla CSS, JavaScript, Socket.io client
+- **Frontend**: HTML5, Modern CSS (Flexbox/Grid), JavaScript, Socket.io client
 - **Mapping**: Leaflet.js, OpenStreetMap
-- **Image Processing**: Pillow
+- **Image Processing**: Pillow (PIL)
