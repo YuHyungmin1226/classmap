@@ -9,6 +9,21 @@
     .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 450px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
     .map-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
     
+    /* Marker Tooltip Style */
+    .marker-tooltip { 
+        background: white !important; 
+        border: 1px solid #cbd5e1 !important; 
+        border-radius: 8px !important; 
+        padding: 6px !important; 
+        font-size: 0.75rem !important; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; 
+        color: #1e293b !important; 
+        font-weight: 600 !important;
+        max-width: 120px;
+        text-align: center;
+    }
+    .leaflet-tooltip-top:before { border-top-color: #cbd5e1 !important; }
+
     /* Carousel styles for multiple flags */
     .flag-carousel-item { display: none; }
     .flag-carousel-item.active { display: block; }
@@ -278,6 +293,7 @@
                     const idx = flagGroups[key].findIndex(f => f.id === updatedFlag.id);
                     if (idx !== -1) {
                         flagGroups[key][idx] = updatedFlag;
+                        updateMarkerTooltip(key);
                         if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
                             renderCarousel();
                         }
@@ -306,6 +322,7 @@
                             
                             delete flagGroups[key];
                         } else {
+                            updateMarkerTooltip(key);
                             if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
                                 if (currentCarouselIndex >= flagGroups[key].length) {
                                     currentCarouselIndex = flagGroups[key].length - 1;
@@ -350,11 +367,61 @@
                 openInfoModal(key);
             });
             markers[key] = marker;
-        } else {
-            if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
-                renderCarousel();
+        }
+
+        updateMarkerTooltip(key);
+
+        if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
+            renderCarousel();
+        }
+    }
+
+    function updateMarkerTooltip(key) {
+        const marker = markers[key];
+        const flags = flagGroups[key];
+        if (!marker || !flags || flags.length === 0) return;
+
+        // Get the latest flag's text
+        const latestFlag = flags[flags.length - 1];
+        let text = latestFlag.text_content || '';
+        
+        // Truncate text if it's too long
+        if (text.length > 20) {
+            text = text.substring(0, 17) + '...';
+        }
+
+        // If there are multiple flags, add a count
+        if (flags.length > 1) {
+            text = `(${flags.length}) ${text}`;
+        }
+
+        if (text.trim() === '' && flags.length === 1) {
+             if (latestFlag.file_path) text = "📎 Attachment";
+             else text = "Note";
+        }
+
+        let html = `<div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">`;
+        
+        // Add image preview if exists
+        let previewPath = latestFlag.thumbnail_path || latestFlag.file_path;
+        if (previewPath) {
+            const ext = previewPath.split('.').pop().toLowerCase();
+            const imageExts = ['png', 'jpg', 'jpeg', 'gif'];
+            if (imageExts.includes(ext)) {
+                html += `<img src="/${previewPath}" style="width: 100%; max-width: 100px; height: auto; border-radius: 4px; display: block;">`;
             }
         }
+        
+        html += `<span style="word-break: break-all;">${escapeHTML(text)}</span></div>`;
+
+        marker.unbindTooltip();
+        marker.bindTooltip(html, {
+            permanent: true,
+            direction: 'top',
+            className: 'marker-tooltip',
+            offset: [0, -10],
+            opacity: 0.95
+        }).openTooltip();
     }
 
     function addFlagToList(flag) {
@@ -462,10 +529,6 @@
                 if (found) { flagToEdit = found; break; }
             }
         } else {
-            // In classwrite, we might need a global flag list or fetch from DOM or keep a simple array
-            // For now, let's just use the socketio load_flags to keep a local copy if needed, 
-            // but simpler: we can just find it in the DOM if we store data there, or keep a global array.
-            // Let's keep a global array for classwrite too.
             flagToEdit = allFlags.find(f => f.id === flagId);
         }
         if (!flagToEdit) return;
@@ -658,7 +721,6 @@
             client_id: clientId
         };
 
-        // Only include file paths if a new file was uploaded, so we don't accidentally overwrite existing on edit
         if (fileUploaded) {
             payload.file_path = file_path;
             payload.thumbnail_path = thumbnail_path;
