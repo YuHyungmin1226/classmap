@@ -366,6 +366,15 @@
             marker.on('click', function() {
                 openInfoModal(key);
             });
+            
+            // Bring to front on hover
+            marker.on('mouseover', function() {
+                this.setZIndexOffset(1000);
+            });
+            marker.on('mouseout', function() {
+                this.setZIndexOffset(0);
+            });
+            
             markers[key] = marker;
         }
 
