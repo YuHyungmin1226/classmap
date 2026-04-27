@@ -15,24 +15,45 @@
     .carousel-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
     .carousel-controls button { padding: 5px 10px; cursor: pointer; border: none; background: #e2e8f0; border-radius: 4px; }
     .carousel-controls button:hover { background: #cbd5e1; }
+    .hidden { display: none !important; }
+
+    /* ClassWrite Styles */
+    .post-list { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
+    .post-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .post-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+    .post-author { font-weight: 700; color: #1e293b; }
+    .post-time { font-size: 0.8rem; color: #64748b; margin-left: 10px; }
+    .post-content { white-space: pre-wrap; color: #334155; line-height: 1.6; }
+    .post-media { margin-top: 15px; }
+    .post-media img, .post-media video { max-width: 100%; border-radius: 8px; }
+    .post-actions { display: flex; gap: 10px; margin-top: 15px; justify-content: flex-end; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="map-header">
-    <h2>Session: {{ map_session.name }}</h2>
-    <div class="controls">
+    <h2>Session: {{ map_session.name }} ({{ 'Map' if map_session.class_group.class_type == 'classmap' else 'Board' }})</h2>
+    <div class="controls" style="display: flex; gap: 10px; align-items: center;">
         <input type="text" id="nickname" class="form-control" placeholder="Your Name (Optional)" value="{{ 'Admin' if is_admin else '' }}" {{ 'disabled' if is_admin else '' }}>
+        {% if map_session.class_group.class_type == 'classwrite' %}
+        <button class="btn btn-primary" onclick="openModal(0, 0)">+ Write Post</button>
+        {% endif %}
     </div>
 </div>
 
+{% if map_session.class_group.class_type == 'classmap' %}
 <div id="map"></div>
+{% else %}
+<div id="post-list" class="post-list">
+    <!-- Posts will be injected here -->
+</div>
+{% endif %}
 
 <!-- Add/Edit Flag Modal -->
 <div id="flagModal" class="modal">
     <div class="modal-content">
         <h3 id="modalTitle">Add Note</h3>
-        <p class="text-muted" style="font-size: 0.8rem;">Location: <span id="displayCoords"></span></p>
+        <p class="text-muted {{ 'hidden' if map_session.class_group.class_type != 'classmap' else '' }}" id="coordsInfo" style="font-size: 0.8rem;">Location: <span id="displayCoords"></span></p>
         <form id="flagForm">
             <input type="hidden" id="coordLat">
             <input type="hidden" id="coordLng">
@@ -83,6 +104,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.js"></script>
 <script>
     const sessionId = "{{ map_session.id }}";
+    const classType = "{{ map_session.class_group.class_type }}";
     const socket = io();
     let map;
     
@@ -108,6 +130,7 @@
     // We group flags by coordinate grouping.
     const flagGroups = {};
     const markers = {};
+    const allFlags = []; // Global list for ClassWrite
     
     // Carousel state
     let currentCarouselFlags = [];
@@ -166,121 +189,135 @@
     document.getElementById('fileInput').addEventListener('change', updatePreview);
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Initialize Leaflet Map
-        map = L.map('map').setView([20, 0], 2);
+        if (classType === 'classmap') {
+            // Initialize Leaflet Map
+            map = L.map('map').setView([20, 0], 2);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
 
-        // Attempt to center map by IP roughly
-        fetch('http://ip-api.com/json/')
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    map.setView([data.lat, data.lon], 12);
-                }
-            })
-            .catch(err => console.log("IP geolocation failed", err));
+            // Attempt to center map by IP roughly
+            fetch('http://ip-api.com/json/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        map.setView([data.lat, data.lon], 12);
+                    }
+                })
+                .catch(err => console.log("IP geolocation failed", err));
 
-        // Add 'My Location' Control
-        const locateControl = L.control({position: 'topright'});
-        locateControl.onAdd = function (map) {
-            const btn = L.DomUtil.create('button', 'btn btn-secondary');
-            btn.innerHTML = '📍 My Location';
-            btn.style.margin = '10px';
-            btn.style.background = 'white';
-            btn.style.border = '2px solid rgba(0,0,0,0.2)';
-            btn.style.borderRadius = '4px';
-            btn.style.padding = '5px 10px';
-            btn.style.cursor = 'pointer';
-            btn.style.fontWeight = 'bold';
-            
-            btn.onmouseover = () => btn.style.background = '#f4f4f4';
-            btn.onmouseout = () => btn.style.background = 'white';
+            // Add 'My Location' Control
+            const locateControl = L.control({position: 'topright'});
+            locateControl.onAdd = function (map) {
+                const btn = L.DomUtil.create('button', 'btn btn-secondary');
+                btn.innerHTML = '📍 My Location';
+                btn.style.margin = '10px';
+                btn.style.background = 'white';
+                btn.style.border = '2px solid rgba(0,0,0,0.2)';
+                btn.style.borderRadius = '4px';
+                btn.style.padding = '5px 10px';
+                btn.style.cursor = 'pointer';
+                btn.style.fontWeight = 'bold';
+                
+                btn.onmouseover = () => btn.style.background = '#f4f4f4';
+                btn.onmouseout = () => btn.style.background = 'white';
 
-            L.DomEvent.disableClickPropagation(btn);
-            
-            btn.onclick = function(e) {
-                e.preventDefault();
-                map.locate({setView: true, maxZoom: 16});
+                L.DomEvent.disableClickPropagation(btn);
+                
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    map.locate({setView: true, maxZoom: 16});
+                };
+                return btn;
             };
-            return btn;
-        };
-        locateControl.addTo(map);
+            locateControl.addTo(map);
 
-        map.on('locationerror', function(e) {
-            alert("Could not access your location. Please ensure location permissions are granted.");
-        });
+            map.on('locationerror', function(e) {
+                alert("Could not access your location. Please ensure location permissions are granted.");
+            });
 
-        // Map Click Event -> Open Add Note modal
-        map.on('click', function(e) {
-            openModal(e.latlng.lat, e.latlng.lng);
-        });
+            // Map Click Event -> Open Add Note modal
+            map.on('click', function(e) {
+                openModal(e.latlng.lat, e.latlng.lng);
+            });
+        }
 
         // Join Socket.io room
         socket.emit('join', {session_id: sessionId});
 
         socket.on('load_flags', function(flags) {
             flags.forEach(f => {
-                if(f.x !== null && f.y !== null) {
-                    addFlagToMap(f);
-                }
+                addFlagToView(f);
             });
         });
 
         socket.on('new_flag', function(flag) {
-            if(flag.x !== null && flag.y !== null) {
-                addFlagToMap(flag);
-            }
+            addFlagToView(flag);
         });
         
         socket.on('flag_edited', function(updatedFlag) {
-            const key = getGroupKey(parseFloat(updatedFlag.x), parseFloat(updatedFlag.y));
-            if (flagGroups[key]) {
-                const idx = flagGroups[key].findIndex(f => f.id === updatedFlag.id);
-                if (idx !== -1) {
-                    flagGroups[key][idx] = updatedFlag;
-                    if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
-                        renderCarousel();
+            if (classType === 'classmap') {
+                const key = getGroupKey(parseFloat(updatedFlag.x), parseFloat(updatedFlag.y));
+                if (flagGroups[key]) {
+                    const idx = flagGroups[key].findIndex(f => f.id === updatedFlag.id);
+                    if (idx !== -1) {
+                        flagGroups[key][idx] = updatedFlag;
+                        if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
+                            renderCarousel();
+                        }
                     }
                 }
+            } else {
+                updateFlagInList(updatedFlag);
             }
         });
         
         socket.on('flag_deleted', function(data) {
             const flagId = data.id;
-            for (const key in flagGroups) {
-                const idx = flagGroups[key].findIndex(f => f.id === flagId);
-                if (idx !== -1) {
-                    flagGroups[key].splice(idx, 1);
-                    // Remove marker if no flags left
-                    if (flagGroups[key].length === 0) {
-                        map.removeLayer(markers[key]);
-                        delete markers[key];
-                        
-                        if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
-                            closeInfoModal();
-                        }
-                        
-                        delete flagGroups[key];
-                    } else {
-                        if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
-                            if (currentCarouselIndex >= flagGroups[key].length) {
-                                currentCarouselIndex = flagGroups[key].length - 1;
+            if (classType === 'classmap') {
+                for (const key in flagGroups) {
+                    const idx = flagGroups[key].findIndex(f => f.id === flagId);
+                    if (idx !== -1) {
+                        flagGroups[key].splice(idx, 1);
+                        // Remove marker if no flags left
+                        if (flagGroups[key].length === 0) {
+                            map.removeLayer(markers[key]);
+                            delete markers[key];
+                            
+                            if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
+                                closeInfoModal();
                             }
-                            renderCarousel();
+                            
+                            delete flagGroups[key];
+                        } else {
+                            if (document.getElementById('infoModal').style.display === 'flex' && currentCarouselFlags === flagGroups[key]) {
+                                if (currentCarouselIndex >= flagGroups[key].length) {
+                                    currentCarouselIndex = flagGroups[key].length - 1;
+                                }
+                                renderCarousel();
+                            }
                         }
+                        break;
                     }
-                    break;
                 }
+            } else {
+                const post = document.getElementById(`post-${flagId}`);
+                if (post) post.remove();
             }
         });
     });
 
-    function getGroupKey(lat, lng) {
-        return `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    function addFlagToView(flag) {
+        allFlags.push(flag); // Keep track of all flags
+        if (classType === 'classmap') {
+            if(flag.x !== null && flag.y !== null) {
+                addFlagToMap(flag);
+            }
+        } else {
+            addFlagToList(flag);
+        }
     }
 
     function addFlagToMap(flag) {
@@ -306,9 +343,95 @@
         }
     }
 
+    function addFlagToList(flag) {
+        const list = document.getElementById('post-list');
+        // Check if already exists (for edits or duplicate emits)
+        const existing = document.getElementById(`post-${flag.id}`);
+        if (existing) {
+            updateFlagInList(flag);
+            return;
+        }
+
+        const card = createPostCard(flag);
+        list.prepend(card); // New posts at top
+    }
+
+    function createPostCard(flagData) {
+        const card = document.createElement('div');
+        card.className = 'post-card';
+        card.id = `post-${flagData.id}`;
+        
+        let timeStr = flagData.created_at ? new Date(flagData.created_at).toLocaleString() : 'Just now';
+        const isOwner = flagData.client_id === clientId;
+        const canEdit = isAdmin || isOwner;
+        let safeAuthorName = escapeHTML(flagData.author_name);
+        
+        let html = `
+            <div class="post-header">
+                <div>
+                    <span class="post-author">${safeAuthorName}</span>
+                    <span class="post-time">${timeStr}</span>
+                </div>`;
+        
+        if (canEdit) {
+            html += `
+                <div class="post-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openEditModal(${flagData.id})">Edit</button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteFlag(${flagData.id})">Delete</button>
+                </div>`;
+        }
+        
+        html += `</div>`;
+
+        // Content
+        let parsedText = flagData.text_content || '';
+        let ytIdForView = null;
+        if (parsedText) {
+            const words = parsedText.split(/\s+/);
+            for (let word of words) {
+                if (!ytIdForView) ytIdForView = getYouTubeId(word);
+            }
+        }
+        let safeParsedText = escapeHTML(parsedText);
+        html += `<div class="post-content">${safeParsedText}</div>`;
+
+        // Media
+        if (flagData.file_path || ytIdForView) {
+            html += `<div class="post-media">`;
+            if (flagData.file_path) {
+                const ext = flagData.file_path.split('.').pop().toLowerCase();
+                if (['png', 'jpg', 'jpeg', 'gif'].includes(ext)) {
+                    html += `<a href="/${flagData.file_path}" target="_blank"><img src="/${flagData.file_path}"></a>`;
+                } else if (['mp4', 'webm', 'mov'].includes(ext)) {
+                    html += `<video controls src="/${flagData.file_path}" style="background: #000; width: 100%;"></video>`;
+                } else {
+                    html += `<a href="/${flagData.file_path}" target="_blank" class="btn btn-secondary btn-sm">📄 View Attachment</a>`;
+                }
+            }
+            if (ytIdForView) {
+                html += `
+                <div style="margin-top: 15px; position: relative; width: 100%; padding-bottom: 56.25%; height: 0; border-radius: 8px; overflow: hidden;">
+                    <iframe src="https://www.youtube.com/embed/${ytIdForView}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen></iframe>
+                </div>`;
+            }
+            html += `</div>`;
+        }
+        
+        card.innerHTML = html;
+        return card;
+    }
+
+    function updateFlagInList(flag) {
+        const existing = document.getElementById(`post-${flag.id}`);
+        if (existing) {
+            const newCard = createPostCard(flag);
+            existing.replaceWith(newCard);
+        }
+    }
+
     // Modals
     function openModal(lat, lng) {
-        document.getElementById('modalTitle').innerText = 'Add Note';
+        document.getElementById('modalTitle').innerText = classType === 'classmap' ? 'Add Note' : 'Write Post';
         document.getElementById('editFlagId').value = '';
         document.getElementById('coordLat').value = lat;
         document.getElementById('coordLng').value = lng;
@@ -319,9 +442,17 @@
 
     function openEditModal(flagId) {
         let flagToEdit = null;
-        for (const key in flagGroups) {
-            const found = flagGroups[key].find(f => f.id === flagId);
-            if (found) { flagToEdit = found; break; }
+        if (classType === 'classmap') {
+            for (const key in flagGroups) {
+                const found = flagGroups[key].find(f => f.id === flagId);
+                if (found) { flagToEdit = found; break; }
+            }
+        } else {
+            // In classwrite, we might need a global flag list or fetch from DOM or keep a simple array
+            // For now, let's just use the socketio load_flags to keep a local copy if needed, 
+            // but simpler: we can just find it in the DOM if we store data there, or keep a global array.
+            // Let's keep a global array for classwrite too.
+            flagToEdit = allFlags.find(f => f.id === flagId);
         }
         if (!flagToEdit) return;
 

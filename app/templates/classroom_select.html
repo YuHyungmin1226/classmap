@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="classroom-selection-container">
+    <div class="selection-header">
+        <h1>Classroom</h1>
+        <p>어떤 유형의 클래스를 생성하시겠습니까?</p>
+    </div>
+
+    <div class="selection-grid">
+        <!-- Classmap Option -->
+        <div class="selection-card" onclick="goToDashboard('classmap')">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7Z" />
+                    <path d="M3 10H21" />
+                    <path d="M10 5V19" />
+                </svg>
+            </div>
+            <h3>Classmap</h3>
+            <p>지도 위에 생각을 공유하고<br>활동을 기록하는 맵형 클래스</p>
+            <div class="select-badge">입장하기</div>
+        </div>
+
+        <!-- ClassWrite Option -->
+        <div class="selection-card" onclick="goToDashboard('classwrite')">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" />
+                    <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" />
+                </svg>
+            </div>
+            <h3>ClassWrite</h3>
+            <p>게시글을 작성하고 의견을 나누는<br>게시판형 클래스</p>
+            <div class="select-badge">입장하기</div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+.classroom-selection-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 20px;
+    text-align: center;
+}
+
+.selection-header h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.selection-header p {
+    color: #64748b;
+    font-size: 1.2rem;
+    margin-bottom: 40px;
+}
+
+.selection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.selection-card {
+    background: white;
+    border-radius: 24px;
+    padding: 40px 30px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.selection-card:hover {
+    transform: translateY(-10px);
+    border-color: #6366f1;
+    box-shadow: 0 20px 35px -10px rgba(99, 102, 241, 0.2);
+}
+
+.card-icon {
+    width: 80px;
+    height: 80px;
+    background: #f1f5f9;
+    border-radius: 20px;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6366f1;
+    transition: all 0.3s ease;
+}
+
+.selection-card:hover .card-icon {
+    background: #6366f1;
+    color: white;
+}
+
+.card-icon svg {
+    width: 40px;
+    height: 40px;
+}
+
+.selection-card h3 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #1e293b;
+}
+
+.selection-card p {
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+.select-badge {
+    display: inline-block;
+    padding: 10px 24px;
+    background: #f1f5f9;
+    color: #475569;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+</style>
+
+<script>
+function goToDashboard(type) {
+    const isAdmin = {{ 'true' if is_admin else 'false' }};
+    let url;
+    if (isAdmin) {
+        url = "{{ url_for('main.admin_dashboard') }}?type=" + type;
+    } else {
+        url = "{{ url_for('main.classes') }}?type=" + type;
+    }
+    location.href = url;
+}
+</script>
+{% endblock %}

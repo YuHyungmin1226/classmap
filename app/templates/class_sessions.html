@@ -4,7 +4,7 @@
 <div class="hero">
     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto;">
         <a href="{{ url_for('main.index') }}" class="btn btn-secondary">← Back to Classes</a>
-        <h1 style="margin: 0; text-align: right;">{{ class_group.name }} - Sessions</h1>
+        <h1 style="margin: 0; text-align: right;">{{ class_group.name }} ({{ 'Map' if class_group.class_type == 'classmap' else 'Board' }})</h1>
     </div>
     <p style="margin-top: 20px;">Select an active session below to participate.</p>
 </div>

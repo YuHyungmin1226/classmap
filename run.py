@@ -44,13 +44,13 @@ if __name__ == '__main__':
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         local_ips = get_all_local_ips()
         print("="*60)
-        print("🚀 Server is running!")
-        print(f"👉 Local Access (Teacher):   http://localhost:5555")
+        print("🚀 Classroom Server is running!")
+        print(f"👉 Classroom Portal: http://localhost:5555")
         
         for i, ip in enumerate(local_ips):
-            print(f"👉 Network Access (Students {i+1}): http://{ip}:5555")
+            print(f"👉 Network Access: http://{ip}:5555")
             
-        print("   (Share the correct Network Access link with your students)")
+        print("   (Share the Network Access link with your students)")
         print("="*60)
         
     socketio.run(app, debug=True, host='0.0.0.0', port=5555, use_reloader=True)

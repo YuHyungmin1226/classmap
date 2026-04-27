@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Map App</title>
+    <title>Classroom App</title>
     <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -13,13 +13,13 @@
     <nav class="navbar">
         <div class="nav-container">
             {% if session.get('admin_logged_in') %}
-                <a href="{{ url_for('main.admin_dashboard') }}" class="brand">🌍 ClassMap</a>
+                <a href="{{ url_for('main.admin_classroom') }}" class="brand">🏫 Classroom</a>
             {% else %}
-                <a href="/" class="brand">🌍 ClassMap</a>
+                <a href="/" class="brand">🏫 Classroom</a>
             {% endif %}
             <div class="nav-links">
                 {% if session.get('admin_logged_in') %}
-                    <a href="{{ url_for('main.admin_dashboard') }}" class="btn-text">Dashboard</a>
+                    <a href="{{ url_for('main.index') }}" class="btn-text">Dashboard</a>
                     <a href="{{ url_for('main.admin_settings') }}" class="btn-text">Admin Menu</a>
                     <a href="{{ url_for('main.admin_logout') }}" class="btn-text">Logout</a>
                 {% else %}

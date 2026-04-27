@@ -27,7 +27,7 @@ def admin_login():
         admin = Admin.query.first()
         if admin and admin.check_password(password):
             session['admin_logged_in'] = True
-            return redirect(url_for('main.admin_dashboard'))
+            return redirect(url_for('main.admin_classroom'))
         flash('Invalid password')
     return render_template('admin_login.html')
 
@@ -40,9 +40,15 @@ def admin_logout():
 def admin_dashboard():
     if not session.get('admin_logged_in'):
         return redirect(url_for('main.admin_login'))
-    active_classes = ClassGroup.query.filter_by(is_active=True).all()
-    past_classes = ClassGroup.query.filter_by(is_active=False).all()
-    return render_template('admin_dashboard.html', active_classes=active_classes, past_classes=past_classes)
+    
+    class_type = request.args.get('type', 'classmap')
+    active_classes = ClassGroup.query.filter_by(is_active=True, class_type=class_type).all()
+    past_classes = ClassGroup.query.filter_by(is_active=False, class_type=class_type).all()
+    return render_template('admin_dashboard.html', 
+                           active_classes=active_classes, 
+                           past_classes=past_classes,
+                           current_type=class_type)
+
 
 @main.route('/admin/create_class', methods=['POST'])
 def create_class():
@@ -50,12 +56,14 @@ def create_class():
         return jsonify({'error': 'Unauthorized'}), 401
     
     name = request.form.get('name')
+    class_type = request.form.get('class_type', 'classmap')
+    
     if not name:
         name = f"Class {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-    new_class = ClassGroup(name=name)
+    new_class = ClassGroup(name=name, class_type=class_type)
     db.session.add(new_class)
     db.session.commit()
-    return redirect(url_for('main.admin_dashboard'))
+    return redirect(url_for('main.admin_dashboard', type=class_type))
 
 @main.route('/admin/close_class/<class_id>', methods=['POST'])
 def close_class(class_id):
@@ -64,7 +72,7 @@ def close_class(class_id):
     c = ClassGroup.query.get_or_404(class_id)
     c.is_active = False
     db.session.commit()
-    return redirect(url_for('main.admin_dashboard'))
+    return redirect(url_for('main.admin_dashboard', type=c.class_type))
 
 @main.route('/admin/class/<class_id>')
 def admin_class(class_id):
@@ -141,12 +149,26 @@ def reset_data():
     flash('All data has been successfully reset.')
     return redirect(url_for('main.admin_settings'))
 
-# --- Participant Routes ---
+# --- Portal and Common Routes ---
 @main.route('/')
 def index():
-    # Participant dashboard showing active classes
-    active_classes = ClassGroup.query.filter_by(is_active=True).all()
-    return render_template('index.html', classes=active_classes)
+    # Integrated portal for everyone
+    return render_template('classroom_select.html', is_admin=session.get('admin_logged_in', False))
+
+@main.route('/admin/classroom')
+def admin_classroom():
+    # Still keep this for explicit admin access
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('main.admin_login'))
+    return render_template('classroom_select.html', is_admin=True)
+
+# --- Participant Routes ---
+@main.route('/classes')
+def classes():
+    # Participant dashboard showing filtered active classes
+    class_type = request.args.get('type', 'classmap')
+    active_classes = ClassGroup.query.filter_by(is_active=True, class_type=class_type).all()
+    return render_template('index.html', classes=active_classes, current_type=class_type)
 
 @main.route('/class/<class_id>')
 def view_class(class_id):

@@ -2,8 +2,11 @@
 
 {% block content %}
 <div class="hero">
-    <h1>Join a Class</h1>
-    <p>Select your class below to see available sessions.</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto;">
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">← Back to Classroom</a>
+        <h1 style="margin: 0; text-align: right;">Join a {{ 'Map' if current_type == 'classmap' else 'Board' }} Class</h1>
+    </div>
+    <p style="margin-top: 20px;">Select your class below to see available sessions.</p>
 </div>
 
 <div class="sessions-container">
@@ -12,6 +15,7 @@
         {% for c in classes %}
             <div class="card session-card">
                 <h3>{{ c.name }}</h3>
+                <p style="margin-bottom: 10px; font-weight: 600; color: #6366f1;">Type: {{ 'Map' if c.class_type == 'classmap' else 'Board' }}</p>
                 <p>Status: <span class="badge active">Active</span></p>
                 <a href="{{ url_for('main.view_class', class_id=c.id) }}" class="btn btn-primary">View Sessions</a>
             </div>
