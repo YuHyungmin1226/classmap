@@ -31,12 +31,21 @@
 {% endblock %}
 
 {% block content %}
-<div class="map-header">
-    <h2>Session: {{ map_session.name }} ({{ 'Map' if map_session.class_group.class_type == 'classmap' else 'Board' }})</h2>
-    <div class="controls" style="display: flex; gap: 10px; align-items: center;">
-        <input type="text" id="nickname" class="form-control" placeholder="Your Name (Optional)" value="{{ 'Admin' if is_admin else '' }}" {{ 'disabled' if is_admin else '' }}>
+<div class="page-header">
+    <h1 class="header-title">{{ map_session.name }} ({{ 'Map' if map_session.class_group.class_type == 'classmap' else 'Board' }})</h1>
+    <div class="header-actions">
+        {% if is_admin %}
+        <a href="{{ url_for('main.admin_class', class_id=map_session.class_id) }}" class="btn btn-secondary btn-sm">← Back</a>
+        {% else %}
+        <a href="{{ url_for('main.view_class', class_id=map_session.class_id) }}" class="btn btn-secondary btn-sm">← Back</a>
+        {% endif %}
+
+        <input type="text" id="nickname" class="form-control" placeholder="Name" 
+               value="{{ 'Admin' if is_admin else '' }}" {{ 'disabled' if is_admin else '' }} 
+               style="width: 100px; height: 36px; padding: 0 10px; font-size: 0.9rem;">
+        
         {% if map_session.class_group.class_type == 'classwrite' %}
-        <button class="btn btn-primary" onclick="openModal(0, 0)">+ Write Post</button>
+        <button class="btn btn-primary btn-sm" onclick="openModal(0, 0)">Post</button>
         {% endif %}
     </div>
 </div>
@@ -431,7 +440,7 @@
 
     // Modals
     function openModal(lat, lng) {
-        document.getElementById('modalTitle').innerText = classType === 'classmap' ? 'Add Note' : 'Write Post';
+        document.getElementById('modalTitle').innerText = classType === 'classmap' ? 'Add Note' : 'Post';
         document.getElementById('editFlagId').value = '';
         document.getElementById('coordLat').value = lat;
         document.getElementById('coordLng').value = lng;

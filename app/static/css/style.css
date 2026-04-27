@@ -87,7 +87,15 @@ body {
 .btn-secondary { background: #e2e8f0; color: var(--text); }
 .btn-secondary:hover { background: #cbd5e1; }
 .btn-danger { background: var(--danger); color: white; }
-.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+
+.btn-sm { 
+    padding: 0 0.75rem; 
+    font-size: 0.875rem; 
+    height: 36px; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center;
+}
 .w-100 { width: 100%; }
 
 /* Forms */
@@ -109,10 +117,33 @@ body {
 .inline-form { display: inline; }
 
 /* Dashboard */
-.dashboard-header {
+/* Header System */
+.page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.header-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-header {
     margin-bottom: 2rem;
 }
 
@@ -157,7 +188,12 @@ body {
     font-weight: 600;
 }
 
-.hero { text-align: center; margin-bottom: 3rem; }
+.hero { 
+    text-align: left; 
+    margin-bottom: 3rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
 .empty-state { text-align: center; color: var(--text-light); }
 .auth-container { max-width: 400px; margin: 4rem auto; }
 .flash-messages { margin-bottom: 1.5rem; }

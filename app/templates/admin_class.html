@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="dashboard-header">
-    <h2>Class: {{ class_group.name }}</h2>
-    <div style="display: flex; gap: 10px; align-items: stretch;">
-        <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-secondary" style="display: flex; align-items: center; justify-content: center; margin: 0;">← Back</a>
-        <form method="POST" action="{{ url_for('main.create_session', class_id=class_group.id) }}" class="inline-form" id="createSessionForm" style="margin: 0; display: flex;">
+<div class="page-header">
+    <h1 class="header-title">Class: {{ class_group.name }}</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('main.admin_dashboard', type=class_group.class_type) }}" class="btn btn-secondary btn-sm">← Back</a>
+        <form method="POST" action="{{ url_for('main.create_session', class_id=class_group.id) }}" class="inline-form" id="createSessionForm">
             <input type="hidden" name="name" id="sessionNameInput">
-            <button type="button" class="btn btn-primary" onclick="promptSessionName()" style="height: 100%; display: flex; align-items: center; justify-content: center; margin: 0;">+ Create New Session</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="promptSessionName()">+ New Session</button>
         </form>
     </div>
 </div>

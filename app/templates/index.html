@@ -1,12 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="hero">
-    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto;">
-        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">← Back to Classroom</a>
-        <h1 style="margin: 0; text-align: right;">Join a {{ 'Map' if current_type == 'classmap' else 'Board' }} Class</h1>
+<div class="page-header">
+    <h1 class="header-title">Join a {{ 'Map' if current_type == 'classmap' else 'Board' }} Class</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary btn-sm">← Back</a>
     </div>
-    <p style="margin-top: 20px;">Select your class below to see available sessions.</p>
 </div>
 
 <div class="sessions-container">

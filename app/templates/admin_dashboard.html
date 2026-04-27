@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="dashboard-header">
-    <div>
-        <a href="{{ url_for('main.admin_classroom') }}" class="btn btn-secondary btn-sm" style="margin-bottom: 10px;">&larr; Classroom 유형 선택</a>
-        <h2>{{ 'Map' if current_type == 'classmap' else 'Board' }} Dashboard (Classes)</h2>
+<div class="page-header">
+    <h1 class="header-title">{{ 'Map' if current_type == 'classmap' else 'Board' }} Dashboard</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('main.admin_classroom') }}" class="btn btn-secondary btn-sm">← Back</a>
+        <form method="POST" action="{{ url_for('main.create_class') }}" class="inline-form" id="createClassForm">
+            <input type="hidden" name="name" id="classNameInput">
+            <input type="hidden" name="class_type" value="{{ current_type }}">
+            <button type="button" class="btn btn-primary btn-sm" onclick="promptClassName()">+ New Class</button>
+        </form>
     </div>
-    <form method="POST" action="{{ url_for('main.create_class') }}" class="inline-form" id="createClassForm">
-        <input type="hidden" name="name" id="classNameInput">
-        <input type="hidden" name="class_type" value="{{ current_type }}">
-        <button type="button" class="btn btn-primary" onclick="promptClassName()">+ Create New {{ 'Map' if current_type == 'classmap' else 'Board' }} Class</button>
-    </form>
 </div>
 
 <script>

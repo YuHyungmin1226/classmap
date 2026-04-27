@@ -168,7 +168,8 @@ def classes():
     # Participant dashboard showing filtered active classes
     class_type = request.args.get('type', 'classmap')
     active_classes = ClassGroup.query.filter_by(is_active=True, class_type=class_type).all()
-    return render_template('index.html', classes=active_classes, current_type=class_type)
+    is_admin = session.get('admin_logged_in', False)
+    return render_template('index.html', classes=active_classes, current_type=class_type, is_admin=is_admin)
 
 @main.route('/class/<class_id>')
 def view_class(class_id):
@@ -176,7 +177,8 @@ def view_class(class_id):
     if not c.is_active and not session.get('admin_logged_in'):
         return "This class is closed.", 403
     active_sessions = Session.query.filter_by(class_id=class_id, is_active=True).all()
-    return render_template('class_sessions.html', class_group=c, sessions=active_sessions)
+    is_admin = session.get('admin_logged_in', False)
+    return render_template('class_sessions.html', class_group=c, sessions=active_sessions, is_admin=is_admin)
 
 @main.route('/session/<session_id>')
 def view_session(session_id):

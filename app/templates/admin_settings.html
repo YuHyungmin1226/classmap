@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div style="max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
-    <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 25px;">
-        <h2 style="margin: 0; font-size: 1.5em; color: #1e293b;">Admin Menu & Settings</h2>
-        <p style="color: #64748b; margin: 5px 0 0 0; font-size: 0.9em;">Manage your administrator account credentials and preferences.</p>
+<div class="page-header">
+    <h1 class="header-title">Admin Settings</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-secondary btn-sm">← Back</a>
     </div>
+</div>
+
+<div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+
 
     <div>
         <h3 style="margin-top: 0; font-size: 1.2em; margin-bottom: 15px; color: #334155;">Change Password</h3>
