@@ -43,6 +43,13 @@
     .post-media { margin-top: 15px; }
     .post-media img, .post-media video { max-width: 100%; border-radius: 8px; }
     .post-actions { display: flex; gap: 10px; margin-top: 15px; justify-content: flex-end; }
+
+    /* Inline Write Styles */
+    .write-container { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); margin-bottom: 30px; }
+    .write-container h3 { margin-top: 0; margin-bottom: 15px; font-size: 1.25rem; color: #1e293b; }
+    .write-container .form-group { margin-bottom: 15px; }
+    .write-container textarea { min-height: 120px; font-size: 1rem; border: 1px solid #cbd5e1; transition: border-color 0.2s; }
+    .write-container textarea:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
 </style>
 {% endblock %}
 
@@ -60,7 +67,7 @@
                value="{{ 'Admin' if is_admin else '' }}" {{ 'disabled' if is_admin else '' }} 
                style="width: 100px; height: 36px; padding: 0 10px; font-size: 0.9rem;">
         
-        {% if map_session.class_group.class_type == 'classwrite' %}
+        {% if map_session.class_group.class_type == 'classmap' %}
         <button class="btn btn-primary btn-sm" onclick="openModal(0, 0)">Post</button>
         {% endif %}
     </div>
@@ -69,6 +76,32 @@
 {% if map_session.class_group.class_type == 'classmap' %}
 <div id="map"></div>
 {% else %}
+<div class="write-container">
+    <h3>New Post</h3>
+    <form id="inlineFlagForm">
+        <input type="hidden" id="inlinecoordLat" value="0">
+        <input type="hidden" id="inlinecoordLng" value="0">
+        <input type="hidden" id="inlineeditFlagId">
+        <div class="form-group">
+            <textarea id="inlinetextContent" class="form-control" rows="4" placeholder="Share your thoughts or paste a YouTube link..."></textarea>
+        </div>
+        <div class="form-group">
+            <label style="font-size: 0.9rem; color: #64748b; display: block; margin-bottom: 5px;">Attach Image or Video</label>
+            <input type="file" id="inlinefileInput" class="form-control" accept="image/*,video/mp4,video/webm,video/quicktime">
+        </div>
+        
+        <!-- Live Preview Container -->
+        <div id="inlinemediaPreviewContainer" style="display: none; margin-bottom: 15px; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 8px; text-align: center;">
+            <p style="font-size: 0.8rem; color: #64748b; margin-top: 0; margin-bottom: 8px;">Preview</p>
+            <div id="inlinemediaPreviewContent"></div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-primary" id="inlinesubmitFlagBtn" style="padding: 10px 25px;">Post Now</button>
+        </div>
+    </form>
+</div>
+
 <div id="post-list" class="post-list">
     <!-- Posts will be injected here -->
 </div>
@@ -173,11 +206,12 @@
         return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    function updatePreview() {
-        const previewContainer = document.getElementById('mediaPreviewContainer');
-        const previewContent = document.getElementById('mediaPreviewContent');
-        const textVal = document.getElementById('textContent').value;
-        const fileInput = document.getElementById('fileInput');
+    function updatePreview(type = 'modal') {
+        const isInline = type === 'inline';
+        const previewContainer = document.getElementById(isInline ? 'inlinemediaPreviewContainer' : 'mediaPreviewContainer');
+        const previewContent = document.getElementById(isInline ? 'inlinemediaPreviewContent' : 'mediaPreviewContent');
+        const textVal = document.getElementById(isInline ? 'inlinetextContent' : 'textContent').value;
+        const fileInput = document.getElementById(isInline ? 'inlinefileInput' : 'fileInput');
 
         previewContent.innerHTML = '';
         previewContainer.style.display = 'none';
@@ -215,8 +249,13 @@
         }
     }
 
-    document.getElementById('textContent').addEventListener('input', updatePreview);
-    document.getElementById('fileInput').addEventListener('change', updatePreview);
+    document.getElementById('textContent').addEventListener('input', () => updatePreview('modal'));
+    document.getElementById('fileInput').addEventListener('change', () => updatePreview('modal'));
+    
+    if (document.getElementById('inlinetextContent')) {
+        document.getElementById('inlinetextContent').addEventListener('input', () => updatePreview('inline'));
+        document.getElementById('inlinefileInput').addEventListener('change', () => updatePreview('inline'));
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
         if (classType === 'classmap') {
@@ -707,18 +746,19 @@
     }
 
     // Submit (Add or Edit)
-    document.getElementById('flagForm').addEventListener('submit', async (e) => {
+    async function handleFlagSubmit(e, type = 'modal') {
         e.preventDefault();
-        const btn = document.getElementById('submitFlagBtn');
+        const isInline = type === 'inline';
+        const btn = document.getElementById(isInline ? 'inlinesubmitFlagBtn' : 'submitFlagBtn');
         btn.disabled = true;
         btn.innerText = 'Saving...';
 
-        const lat = document.getElementById('coordLat').value;
-        const lng = document.getElementById('coordLng').value;
-        const textContent = document.getElementById('textContent').value;
-        const fileInput = document.getElementById('fileInput');
+        const lat = document.getElementById(isInline ? 'inlinecoordLat' : 'coordLat').value;
+        const lng = document.getElementById(isInline ? 'inlinecoordLng' : 'coordLng').value;
+        const textContent = document.getElementById(isInline ? 'inlinetextContent' : 'textContent').value;
+        const fileInput = document.getElementById(isInline ? 'inlinefileInput' : 'fileInput');
         let authorName = document.getElementById('nickname').value || 'Participant';
-        const editId = document.getElementById('editFlagId').value;
+        const editId = document.getElementById(isInline ? 'inlineeditFlagId' : 'editFlagId').value;
 
         let file_path = null;
         let thumbnail_path = null;
@@ -770,9 +810,22 @@
             socket.emit('add_flag', payload);
         }
 
-        closeModal();
+        if (type === 'modal') {
+            closeModal();
+        } else {
+            // Reset inline form
+            document.getElementById('inlineFlagForm').reset();
+            document.getElementById('inlinemediaPreviewContainer').style.display = 'none';
+            document.getElementById('inlinemediaPreviewContent').innerHTML = '';
+        }
+        
         btn.disabled = false;
-        btn.innerText = 'Save';
-    });
+        btn.innerText = type === 'inline' ? 'Post Now' : 'Save';
+    }
+
+    document.getElementById('flagForm').addEventListener('submit', (e) => handleFlagSubmit(e, 'modal'));
+    if (document.getElementById('inlineFlagForm')) {
+        document.getElementById('inlineFlagForm').addEventListener('submit', (e) => handleFlagSubmit(e, 'inline'));
+    }
 </script>
 {% endblock %}
