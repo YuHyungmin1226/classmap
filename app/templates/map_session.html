@@ -201,9 +201,10 @@
 
     // Media Preview Logic
     function getYouTubeId(url) {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        // Robust regex for various YouTube URL formats (watch, embed, youtu.be, shorts)
+        const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/;
         const match = url.match(regExp);
-        return (match && match[2].length === 11) ? match[2] : null;
+        return match ? match[1] : null;
     }
 
     function updatePreview(type = 'modal') {
