@@ -34,8 +34,27 @@
             <p>게시글을 작성하고 의견을 나누는<br>게시판형 클래스</p>
             <div class="select-badge">입장하기</div>
         </div>
-    </div>
 
+        <!-- ClassDraw Option -->
+        <div class="selection-card" onclick="goToDashboard('classdraw')">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                    <path d="M2 2l7.586 7.586" />
+                    <circle cx="11" cy="11" r="2" />
+                </svg>
+            </div>
+            <h3>ClassDraw</h3>
+            <p>실시간으로 함께 그림을 그리며<br>생각을 시각화하는 드로잉 클래스</p>
+            <div class="select-badge">입장하기</div>
+        </div>
+    </div>
+    <div id="selection-config" 
+         data-is-admin="{{ 'true' if is_admin else 'false' }}" 
+         data-admin-url="{{ url_for('main.admin_dashboard') }}" 
+         data-classes-url="{{ url_for('main.classes') }}">
+    </div>
 </div>
 
 <style>
@@ -136,12 +155,13 @@
 
 <script>
 function goToDashboard(type) {
-    const isAdmin = {{ 'true' if is_admin else 'false' }};
+    const config = document.getElementById('selection-config').dataset;
+    const isAdmin = config.isAdmin === 'true';
     let url;
     if (isAdmin) {
-        url = "{{ url_for('main.admin_dashboard') }}?type=" + type;
+        url = config.adminUrl + "?type=" + type;
     } else {
-        url = "{{ url_for('main.classes') }}?type=" + type;
+        url = config.classesUrl + "?type=" + type;
     }
     location.href = url;
 }

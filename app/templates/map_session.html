@@ -50,12 +50,29 @@
     .write-container .form-group { margin-bottom: 15px; }
     .write-container textarea { min-height: 120px; font-size: 1rem; border: 1px solid #cbd5e1; transition: border-color 0.2s; }
     .write-container textarea:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+    /* ClassDraw Styles */
+    .draw-container { position: relative; background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    #drawCanvas { cursor: crosshair; width: 100%; height: 70vh; display: block; background: #fff; }
+    .draw-toolbar { 
+        position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); 
+        background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px);
+        padding: 10px 20px; border-radius: 50px; border: 1px solid #e2e8f0;
+        display: flex; gap: 15px; align-items: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+    }
+    .tool-group { display: flex; align-items: center; gap: 8px; border-right: 1px solid #e2e8f0; padding-right: 15px; }
+    .tool-group:last-child { border-right: none; padding-right: 0; }
+    .color-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; }
+    .color-btn.active { transform: scale(1.2); border-color: #6366f1; }
+    .size-btn { width: 30px; height: 30px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+    .size-btn.active { background: #6366f1; color: white; border-color: #6366f1; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1 class="header-title">{{ map_session.name }} ({{ 'Map' if map_session.class_group.class_type == 'classmap' else 'Board' }})</h1>
+    <h1 class="header-title">{{ map_session.name }} ({{ 'Map' if map_session.class_group.class_type == 'classmap' else ('Drawing' if map_session.class_group.class_type == 'classdraw' else 'Board') }})</h1>
     <div class="header-actions">
         {% if is_admin %}
         <a href="{{ url_for('main.admin_class', class_id=map_session.class_id) }}" class="btn btn-secondary btn-sm">← Back</a>
@@ -75,6 +92,30 @@
 
 {% if map_session.class_group.class_type == 'classmap' %}
 <div id="map"></div>
+{% elif map_session.class_group.class_type == 'classdraw' %}
+<div class="draw-container">
+    <canvas id="drawCanvas"></canvas>
+    <div class="draw-toolbar">
+        <div class="tool-group">
+            <div class="color-btn active" style="background: #1e293b;" data-color="#1e293b"></div>
+            <div class="color-btn" style="background: #ef4444;" data-color="#ef4444"></div>
+            <div class="color-btn" style="background: #22c55e;" data-color="#22c55e"></div>
+            <div class="color-btn" style="background: #3b82f6;" data-color="#3b82f6"></div>
+            <div class="color-btn" style="background: #f59e0b;" data-color="#f59e0b"></div>
+        </div>
+        <div class="tool-group">
+            <button class="size-btn active" data-size="3">S</button>
+            <button class="size-btn" data-size="8">M</button>
+            <button class="size-btn" data-size="15">L</button>
+        </div>
+        <div class="tool-group">
+            <button class="btn btn-secondary btn-sm" id="eraserBtn">Eraser</button>
+            {% if is_admin %}
+            <button class="btn btn-danger btn-sm" onclick="clearCanvas()">Clear All</button>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% else %}
 <div class="write-container">
     <h3>New Post</h3>
@@ -827,6 +868,132 @@
     document.getElementById('flagForm').addEventListener('submit', (e) => handleFlagSubmit(e, 'modal'));
     if (document.getElementById('inlineFlagForm')) {
         document.getElementById('inlineFlagForm').addEventListener('submit', (e) => handleFlagSubmit(e, 'inline'));
+    }
+
+    // --- ClassDraw Logic ---
+    if (classType === 'classdraw') {
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let lastX, lastY;
+        let currentColor = '#1e293b';
+        let currentSize = 3;
+        let isEraser = false;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            // Save current content
+            const tempImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            // Restore content
+            ctx.putImageData(tempImage, 0, 0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function startDrawing(e) {
+            drawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            lastX = clientX - rect.left;
+            lastY = clientY - rect.top;
+        }
+
+        function stopDrawing() {
+            drawing = false;
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            const drawData = {
+                session_id: sessionId,
+                x: x,
+                y: y,
+                prevX: lastX,
+                prevY: lastY,
+                color: isEraser ? '#ffffff' : currentColor,
+                size: currentSize
+            };
+
+            executeDraw(drawData);
+            socket.emit('draw_data', drawData);
+
+            lastX = x;
+            lastY = y;
+        }
+
+        function executeDraw(data) {
+            ctx.lineWidth = data.size;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = data.color;
+            ctx.beginPath();
+            ctx.moveTo(data.prevX, data.prevY);
+            ctx.lineTo(data.x, data.y);
+            ctx.stroke();
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+        canvas.addEventListener('touchend', stopDrawing);
+
+        socket.on('draw_data', (data) => {
+            executeDraw(data);
+        });
+
+        socket.on('clear_canvas', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // Toolbar UI Controls
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.onclick = () => {
+                isEraser = false;
+                currentColor = btn.dataset.color;
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('eraserBtn').classList.remove('btn-primary');
+                document.getElementById('eraserBtn').classList.add('btn-secondary');
+            };
+        });
+
+        document.querySelectorAll('.size-btn').forEach(btn => {
+            btn.onclick = () => {
+                currentSize = parseInt(btn.dataset.size);
+                document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            };
+        });
+
+        document.getElementById('eraserBtn').onclick = () => {
+            isEraser = !isEraser;
+            if (isEraser) {
+                document.getElementById('eraserBtn').classList.remove('btn-secondary');
+                document.getElementById('eraserBtn').classList.add('btn-primary');
+            } else {
+                document.getElementById('eraserBtn').classList.remove('btn-primary');
+                document.getElementById('eraserBtn').classList.add('btn-secondary');
+            }
+        };
+    }
+
+    function clearCanvas() {
+        if (confirm("모든 그림을 지우시겠습니까?")) {
+            socket.emit('clear_canvas', { session_id: sessionId });
+        }
     }
 </script>
 {% endblock %}

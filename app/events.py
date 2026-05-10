@@ -66,7 +66,7 @@ def on_add_flag(data):
     }
     
     # Broadcast to everyone in the room (session)
-    emit('new_flag', flag_data, room=session_id)
+    emit('new_flag', flag_data, to=session_id)
 
 @socketio.on('edit_flag')
 def on_edit_flag(data):
@@ -104,7 +104,7 @@ def on_edit_flag(data):
             'client_id': flag.client_id
         }
         
-        emit('flag_edited', flag_data, room=session_id)
+        emit('flag_edited', flag_data, to=session_id)
 
 @socketio.on('delete_flag')
 def on_delete_flag(data):
@@ -120,8 +120,21 @@ def on_delete_flag(data):
         if not is_admin and flag.client_id != requester_client_id:
             print(f"Unauthorized delete attempt for flag {flag_id} by client {requester_client_id}")
             return
-
+ 
         db.session.delete(flag)
         db.session.commit()
         
-        emit('flag_deleted', {'id': flag_id, 'session_id': session_id}, room=session_id)
+        emit('flag_deleted', {'id': flag_id, 'session_id': session_id}, to=session_id)
+        
+@socketio.on('draw_data')
+def on_draw_data(data):
+    session_id = data.get('session_id')
+    # Broadcast drawing data to everyone else in the room
+    emit('draw_data', data, to=session_id, include_self=False)
+
+@socketio.on('clear_canvas')
+def on_clear_canvas(data):
+    session_id = data.get('session_id')
+    # Authorization check for clearing canvas (admin only)
+    if session.get('admin_logged_in'):
+        emit('clear_canvas', {}, to=session_id)
