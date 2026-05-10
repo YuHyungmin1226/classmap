@@ -4,8 +4,10 @@
 <div class="page-header">
     <h1 class="header-title">Class: {{ class_group.name }}</h1>
     <div class="header-actions">
-        <a href="{{ url_for('main.admin_dashboard', type=class_group.class_type) }}" class="btn btn-secondary btn-sm">← Back</a>
-        <form method="POST" action="{{ url_for('main.create_session', class_id=class_group.id) }}" class="inline-form" id="createSessionForm">
+        <a href="{{ url_for('main.admin_dashboard', type=class_group.class_type) }}" class="btn btn-secondary btn-sm">←
+            Back</a>
+        <form method="POST" action="{{ url_for('main.create_session', class_id=class_group.id) }}" class="inline-form"
+            id="createSessionForm">
             <input type="hidden" name="name" id="sessionNameInput">
             <button type="button" class="btn btn-primary btn-sm" onclick="promptSessionName()">+ New Session</button>
         </form>
@@ -13,34 +15,39 @@
 </div>
 
 <script>
-function promptSessionName() {
-    let sessionName = prompt("Enter Session Name (Optional):");
-    if (sessionName !== null) { // If user didn't click Cancel
-        document.getElementById('sessionNameInput').value = sessionName;
-        document.getElementById('createSessionForm').submit();
+    function promptSessionName() {
+        let sessionName = prompt("Enter Session Name (Optional):");
+        if (sessionName !== null) { // If user didn't click Cancel
+            document.getElementById('sessionNameInput').value = sessionName;
+            document.getElementById('createSessionForm').submit();
+        }
     }
-}
 </script>
 
 <div class="dashboard-grid">
     <div class="card" style="grid-column: span 2;">
         <h3>Active Sessions in this Class</h3>
         {% if active_sessions %}
-            <ul class="session-list">
+        <ul class="session-list">
             {% for s in active_sessions %}
-                <li class="session-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px;">
-                    <span style="font-weight: 500; font-size: 1.1em; color: #1e293b;">{{ s.name }}</span>
-                    <div style="display: flex; gap: 10px; align-items: stretch;">
-                        <a href="{{ url_for('main.view_session', session_id=s.id) }}" class="btn btn-primary btn-sm" style="display: flex; align-items: center; justify-content: center; margin: 0;">Enter Session</a>
-                        <form method="POST" action="{{ url_for('main.close_session', session_id=s.id) }}" class="inline-form" style="margin: 0; display: flex;">
-                            <button type="submit" class="btn btn-danger btn-sm" style="height: 100%; display: flex; align-items: center; justify-content: center; margin: 0;">Close</button>
-                        </form>
-                    </div>
-                </li>
+            <li class="session-item"
+                style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px;">
+                <span style="font-weight: 500; font-size: 1.1em; color: #1e293b;">{{ s.name }}</span>
+                <div style="display: flex; gap: 10px; align-items: stretch;">
+                    <a href="{{ url_for('main.view_session', session_id=s.id) }}" class="btn btn-primary btn-sm"
+                        style="display: flex; align-items: center; justify-content: center; margin: 0;">Enter
+                        Session</a>
+                    <form method="POST" action="{{ url_for('main.close_session', session_id=s.id) }}"
+                        class="inline-form" style="margin: 0; display: flex;">
+                        <button type="submit" class="btn btn-danger btn-sm"
+                            style="height: 100%; display: flex; align-items: center; justify-content: center; margin: 0;">Close</button>
+                    </form>
+                </div>
+            </li>
             {% endfor %}
-            </ul>
+        </ul>
         {% else %}
-            <p class="empty-state">No active sessions.</p>
+        <p class="empty-state">No active sessions.</p>
         {% endif %}
     </div>
 </div>
