@@ -47,7 +47,8 @@
     /* Marker Tooltip Style */
     .marker-tooltip {
         background: white !important;
-        border: 2px solid #6366f1 !important; /* Indigo border for brand consistency */
+        border: 2px solid #6366f1 !important;
+        /* Indigo border for brand consistency */
         border-radius: 12px !important;
         padding: 8px !important;
         font-size: 0.8rem !important;
@@ -63,13 +64,14 @@
         box-sizing: border-box !important;
         transition: opacity 0.2s ease;
     }
-    
+
     /* Custom Symmetrical Marker Style */
     .custom-marker-container {
         display: flex;
         justify-content: center;
         align-items: center;
     }
+
     .custom-marker-icon {
         width: 24px;
         height: 24px;
@@ -77,9 +79,10 @@
         border: 3px solid white;
         border-radius: 50% 50% 50% 0;
         transform: rotate(-45deg);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
+
     .custom-marker-icon::after {
         content: '';
         position: absolute;
@@ -91,13 +94,16 @@
         left: 50%;
         transform: translate(-50%, -50%);
     }
+
     .marker-active .custom-marker-icon {
         background: #4f46e5;
         transform: rotate(-45deg) scale(1.3);
         box-shadow: 0 8px 20px rgba(99, 102, 241, 0.5);
     }
+
     .marker-tooltip::before {
-        display: none !important; /* Remove default leaflet arrow if needed, but we keep it usually */
+        display: none !important;
+        /* Remove default leaflet arrow if needed, but we keep it usually */
     }
 
     .leaflet-tooltip-top:before {
@@ -314,7 +320,8 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="header-title">{{ map_session.name }} ({{ 'ClassMap' if map_session.class_group.class_type == 'classmap' else ('ClassDraw' if map_session.class_group.class_type == 'classdraw' else 'ClassWrite') }})</h1>
+    <h1 class="header-title">{{ map_session.name }} ({{ 'ClassMap' if map_session.class_group.class_type == 'classmap'
+        else ('ClassDraw' if map_session.class_group.class_type == 'classdraw' else 'ClassWrite') }})</h1>
     <div class="header-actions">
         {% if is_admin %}
         <a href="{{ url_for('main.admin_class', class_id=map_session.class_id) }}" class="btn btn-secondary btn-sm">←
@@ -354,6 +361,7 @@
         </div>
         <div class="tool-group">
             <button class="btn btn-secondary btn-sm" id="eraserBtn">Eraser</button>
+            <button class="btn btn-primary btn-sm" onclick="exportToPNG()">Export</button>
             {% if is_admin %}
             <button class="btn btn-danger btn-sm" onclick="clearCanvas()">Clear All</button>
             {% endif %}
@@ -1272,6 +1280,13 @@
                 document.getElementById('eraserBtn').classList.remove('btn-primary');
                 document.getElementById('eraserBtn').classList.add('btn-secondary');
             }
+        };
+
+        window.exportToPNG = function() {
+            const link = document.createElement('a');
+            link.download = `ClassDraw-${sessionId}-${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         };
     }
 
