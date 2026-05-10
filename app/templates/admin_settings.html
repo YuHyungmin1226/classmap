@@ -24,6 +24,16 @@
             </div>
         </form>
     </div>
+    
+    <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 25px;">
+        <h3 style="margin-top: 0; font-size: 1.2em; margin-bottom: 15px; color: #334155;">Export Data</h3>
+        <p style="color: #64748b; font-size: 0.9em; margin-bottom: 20px;">
+            Download all posts from all classes and sessions as a ZIP file containing Markdown files.
+        </p>
+        <a href="{{ url_for('main.export_markdown') }}" class="btn btn-secondary" style="width: 100%; text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+            ⬇️ Export All Posts to Markdown (.zip)
+        </a>
+    </div>
 
     <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 25px;">
         <h3 style="margin-top: 0; font-size: 1.2em; margin-bottom: 15px; color: #dc2626;">Danger Zone</h3>

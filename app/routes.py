@@ -1,8 +1,10 @@
-from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash, send_from_directory
+from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash, send_from_directory, send_file
 from werkzeug.utils import secure_filename
 from PIL import Image
 import os
 import uuid
+import io
+import zipfile
 from datetime import datetime
 from . import db
 from .models import Admin, ClassGroup, Session, Flag
@@ -148,6 +150,62 @@ def reset_data():
                 
     flash('All data has been successfully reset.')
     return redirect(url_for('main.admin_settings'))
+
+@main.route('/admin/export_markdown')
+def export_markdown():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('main.admin_login'))
+    
+    # Create a ZIP file in memory
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Fetch all classes, sessions, and flags
+        classes = ClassGroup.query.all()
+        
+        for c in classes:
+            class_folder = secure_filename(c.name) or f"Class_{c.id[:8]}"
+            
+            for s in c.sessions:
+                session_folder = secure_filename(s.name) or f"Session_{s.id[:8]}"
+                
+                for f in s.flags:
+                    # Create markdown content
+                    created_str = f.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    safe_author = secure_filename(f.author_name) or "Participant"
+                    filename = f"{f.id}_{safe_author}_{f.created_at.strftime('%Y%m%d_%H%M%S')}.md"
+                    filepath = os.path.join(class_folder, session_folder, filename)
+                    
+                    md_content = f"""# Post by {f.author_name}
+**Date:** {created_str}
+**Class:** {c.name}
+**Session:** {s.name}
+"""
+                    if f.x is not None and f.y is not None:
+                        md_content += f"**Location:** ({f.x}, {f.y})\n"
+                    
+                    md_content += "\n---\n\n"
+                    md_content += f.text_content if f.text_content else "*No text content*"
+                    md_content += "\n\n---\n"
+                    
+                    if f.file_path:
+                        md_content += f"**Attached File:** {f.file_path}\n"
+                    
+                    # Add to zip
+                    zf.writestr(filepath, md_content)
+        
+        # If no flags found, add a placeholder
+        if not Flag.query.first():
+            zf.writestr("empty_export.txt", "No posts found to export.")
+
+    memory_file.seek(0)
+    
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    return send_file(
+        memory_file,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=f"classroom_export_{timestamp}.zip"
+    )
 
 # --- Portal and Common Routes ---
 @main.route('/')
