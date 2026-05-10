@@ -34,4 +34,4 @@ lsof -t -i :5555 | xargs -I {} kill -9 {} 2>/dev/null || true
 
 # Run the application
 echo "🚀 Launching Application..."
-python run.py
+python3 run.py
