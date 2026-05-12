@@ -18,7 +18,8 @@ def on_join(data):
         'file_path': f.file_path,
         'thumbnail_path': f.thumbnail_path,
         'author_name': f.author_name,
-        'client_id': f.client_id
+        'client_id': f.client_id,
+        'post_type': f.post_type
     } for f in flags]
     emit('load_flags', flags_data, to=request.sid)
 
@@ -38,6 +39,7 @@ def on_add_flag(data):
     thumbnail_path = data.get('thumbnail_path')
     author_name = data.get('author_name', 'Participant')
     client_id = data.get('client_id')
+    post_type = data.get('post_type', 'normal')
 
     new_flag = Flag(
         session_id=session_id,
@@ -48,7 +50,8 @@ def on_add_flag(data):
         file_path=file_path,
         thumbnail_path=thumbnail_path,
         author_name=author_name,
-        client_id=client_id
+        client_id=client_id,
+        post_type=post_type
     )
     db.session.add(new_flag)
     db.session.commit()
@@ -62,7 +65,8 @@ def on_add_flag(data):
         'file_path': new_flag.file_path,
         'thumbnail_path': new_flag.thumbnail_path,
         'author_name': new_flag.author_name,
-        'client_id': new_flag.client_id
+        'client_id': new_flag.client_id,
+        'post_type': new_flag.post_type
     }
     
     # Broadcast to everyone in the room (session)
@@ -84,6 +88,7 @@ def on_edit_flag(data):
             return
             
         flag.text_content = data.get('text_content', flag.text_content)
+        flag.post_type = data.get('post_type', flag.post_type)
         
         # If new file is uploaded, update paths
         if 'file_path' in data:
@@ -101,7 +106,8 @@ def on_edit_flag(data):
             'file_path': flag.file_path,
             'thumbnail_path': flag.thumbnail_path,
             'author_name': flag.author_name,
-            'client_id': flag.client_id
+            'client_id': flag.client_id,
+            'post_type': flag.post_type
         }
         
         emit('flag_edited', flag_data, to=session_id)

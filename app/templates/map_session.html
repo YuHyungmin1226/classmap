@@ -315,6 +315,128 @@
         color: white;
         border-color: #6366f1;
     }
+
+    /* Pinned Post Styles */
+    .pinned-posts {
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .post-card.post-notice {
+        border: 2px solid #e2e8f0;
+    }
+
+    .post-card.post-objective {
+        border: 2px solid #e2e8f0;
+    }
+
+    .post-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-right: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .badge-notice {
+        background-color: #f8fafc;
+        color: #1e293b;
+    }
+
+    .badge-objective {
+        background-color: #f8fafc;
+        color: #1e293b;
+    }
+
+    .admin-options {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .admin-options label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        font-weight: 500;
+        color: #475569;
+    }
+
+    /* Markdown Styles */
+    .post-content h1, .post-content h2, .post-content h3 {
+        margin-top: 10px;
+        margin-bottom: 8px;
+        color: #1e293b;
+    }
+    .post-content h1 { font-size: 1.4rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+    .post-content h2 { font-size: 1.2rem; }
+    .post-content h3 { font-size: 1.1rem; }
+    
+    .post-content ul, .post-content ol {
+        margin-bottom: 10px;
+        padding-left: 20px;
+    }
+    .post-content code {
+        background: #f1f5f9;
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.9em;
+        color: #e11d48;
+    }
+    .post-content pre {
+        background: #1e293b;
+        color: #f8fafc;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 10px 0;
+    }
+    .post-content pre code {
+        background: transparent;
+        padding: 0;
+        color: inherit;
+    }
+    .post-content blockquote {
+        border-left: 4px solid #cbd5e1;
+        padding-left: 15px;
+        color: #64748b;
+        font-style: italic;
+        margin: 10px 0;
+    }
+    .post-content img {
+        max-width: 100%;
+        border-radius: 8px;
+    }
+
+    .post-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+        font-size: 0.95rem;
+    }
+    .post-content th, .post-content td {
+        border: 1px solid #e2e8f0;
+        padding: 8px 12px;
+        text-align: left;
+    }
+    .post-content th {
+        background-color: #f8fafc;
+        font-weight: 600;
+    }
+    .post-content tr:nth-child(even) {
+        background-color: #fcfdfe;
+    }
 </style>
 {% endblock %}
 
@@ -369,9 +491,28 @@
     </div>
 </div>
 {% else %}
+<div id="pinned-posts" class="pinned-posts">
+    <!-- Notices and Learning Objectives will be injected here -->
+</div>
+
 <div class="write-container">
     <h3>New Post</h3>
     <form id="inlineFlagForm">
+        {% if is_admin %}
+        <div class="admin-options">
+            <label>
+                <input type="radio" name="post_type" value="normal" checked> Normal
+            </label>
+            <label>
+                <input type="radio" name="post_type" value="notice"> Notice
+            </label>
+            <label>
+                <input type="radio" name="post_type" value="objective"> Learning Objective
+            </label>
+        </div>
+        {% else %}
+        <input type="hidden" name="post_type" value="normal">
+        {% endif %}
         <input type="hidden" id="inlinecoordLat" value="0">
         <input type="hidden" id="inlinecoordLng" value="0">
         <input type="hidden" id="inlineeditFlagId">
@@ -415,6 +556,19 @@
             <input type="hidden" id="coordLat">
             <input type="hidden" id="coordLng">
             <input type="hidden" id="editFlagId">
+            {% if is_admin %}
+            <div class="admin-options">
+                <label>
+                    <input type="radio" name="post_type" value="normal" checked> Normal
+                </label>
+                <label>
+                    <input type="radio" name="post_type" value="notice"> Notice
+                </label>
+                <label>
+                    <input type="radio" name="post_type" value="objective"> Learning Objective
+                </label>
+            </div>
+            {% endif %}
             <div class="form-group">
                 <label>Text</label>
                 <textarea id="textContent" class="form-control" rows="3"
@@ -460,6 +614,8 @@
 </div>
 
 <!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.js"></script>
@@ -486,6 +642,17 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    function renderMarkdown(text) {
+        if (!text) return '';
+        // Use marked to parse markdown and DOMPurify to sanitize
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+        const rawHtml = marked.parse(text);
+        return DOMPurify.sanitize(rawHtml);
     }
 
     function getGroupKey(lat, lng) {
@@ -538,15 +705,18 @@
 
         // 2. YouTube preview
         if (textVal) {
+            // Check for Markdown content first
+            previewContent.innerHTML = `<div class="post-content" style="text-align: left;">${renderMarkdown(textVal)}</div>`;
+            previewContainer.style.display = 'block';
+
             const words = textVal.split(/\s+/);
             for (let word of words) {
                 const ytId = getYouTubeId(word);
                 if (ytId) {
-                    previewContent.innerHTML = `
+                    previewContent.innerHTML += `
                     <div style="position: relative; width: 100%; padding-bottom: 56.25%; height: 0; border-radius: 4px; overflow: hidden; margin-top: 10px;">
                         <iframe src="https://www.youtube.com/embed/${ytId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen></iframe>
                     </div>`;
-                    previewContainer.style.display = 'block';
                     return;
                 }
             }
@@ -836,7 +1006,9 @@
     }
 
     function addFlagToList(flag) {
-        const list = document.getElementById('post-list');
+        const pinnedList = document.getElementById('pinned-posts');
+        const regularList = document.getElementById('post-list');
+        
         // Check if already exists (for edits or duplicate emits)
         const existing = document.getElementById(`post-${flag.id}`);
         if (existing) {
@@ -845,12 +1017,21 @@
         }
 
         const card = createPostCard(flag);
-        list.prepend(card); // New posts at top
+        if (flag.post_type === 'notice' || flag.post_type === 'objective') {
+            if (pinnedList) pinnedList.prepend(card);
+            else regularList.prepend(card);
+        } else {
+            regularList.prepend(card); // New posts at top
+        }
     }
 
     function createPostCard(flagData) {
         const card = document.createElement('div');
-        card.className = 'post-card';
+        let cardClass = 'post-card';
+        if (flagData.post_type === 'notice') cardClass += ' post-notice';
+        if (flagData.post_type === 'objective') cardClass += ' post-objective';
+        
+        card.className = cardClass;
         card.id = `post-${flagData.id}`;
         
         let timeStr = flagData.created_at ? new Date(flagData.created_at).toLocaleString() : 'Just now';
@@ -858,9 +1039,14 @@
         const canEdit = isAdmin || isOwner;
         let safeAuthorName = escapeHTML(flagData.author_name);
         
+        let badgeHtml = '';
+        if (flagData.post_type === 'notice') badgeHtml = '<span class="post-badge badge-notice">Notice</span>';
+        else if (flagData.post_type === 'objective') badgeHtml = '<span class="post-badge badge-objective">Learning Objective</span>';
+
         let html = `
             <div class="post-header">
                 <div>
+                    ${badgeHtml}
                     <span class="post-author">${safeAuthorName}</span>
                     <span class="post-time">${timeStr}</span>
                 </div>`;
@@ -884,8 +1070,8 @@
                 if (!ytIdForView) ytIdForView = getYouTubeId(word);
             }
         }
-        let safeParsedText = escapeHTML(parsedText);
-        html += `<div class="post-content">${safeParsedText}</div>`;
+        let renderedHtml = renderMarkdown(parsedText);
+        html += `<div class="post-content">${renderedHtml}</div>`;
 
         // Media
         if (flagData.file_path || ytIdForView) {
@@ -917,7 +1103,24 @@
         const existing = document.getElementById(`post-${flag.id}`);
         if (existing) {
             const newCard = createPostCard(flag);
-            existing.replaceWith(newCard);
+            // If post_type changed, it might need to move between lists
+            const pinnedList = document.getElementById('pinned-posts');
+            const regularList = document.getElementById('post-list');
+            
+            const isPinned = flag.post_type === 'notice' || flag.post_type === 'objective';
+            const wasPinned = existing.parentElement && existing.parentElement.id === 'pinned-posts';
+            
+            if (isPinned !== wasPinned) {
+                existing.remove();
+                if (isPinned) {
+                    if (pinnedList) pinnedList.prepend(newCard);
+                    else regularList.prepend(newCard);
+                } else {
+                    regularList.prepend(newCard);
+                }
+            } else {
+                existing.replaceWith(newCard);
+            }
         }
     }
 
@@ -953,6 +1156,15 @@
         document.getElementById('displayCoords').innerText = `${parseFloat(flagToEdit.x).toFixed(4)}, ${parseFloat(flagToEdit.y).toFixed(4)}`;
         document.getElementById('textContent').value = flagToEdit.text_content || '';
         document.getElementById('nickname').value = flagToEdit.author_name;
+        
+        // Set post type radio if exists
+        const typeOptions = document.getElementsByName('post_type');
+        for (let opt of typeOptions) {
+            if (opt.value === flagToEdit.post_type) {
+                opt.checked = true;
+                break;
+            }
+        }
         
         if (!isAdmin) document.getElementById('nickname').disabled = true;
 
@@ -1027,8 +1239,8 @@
                 }
             }
 
-            let safeParsedText = escapeHTML(parsedText);
-            html += `<p style="white-space: pre-wrap; font-size: 0.95em;">${safeParsedText}</p>`;
+            let renderedHtml = renderMarkdown(parsedText);
+            html += `<div class="post-content" style="font-size: 0.95em;">${renderedHtml}</div>`;
             
             // Attached file handling
             if (flagData.file_path) {
@@ -1083,6 +1295,7 @@
     // Submit (Add or Edit)
     async function handleFlagSubmit(e, type = 'modal') {
         e.preventDefault();
+        const form = e.target;
         const isInline = type === 'inline';
         const btn = document.getElementById(isInline ? 'inlinesubmitFlagBtn' : 'submitFlagBtn');
         btn.disabled = true;
@@ -1130,8 +1343,19 @@
             y: lng,
             text_content: textContent,
             author_name: authorName,
-            client_id: clientId
+            client_id: clientId,
+            post_type: 'normal'
         };
+
+        if (isAdmin) {
+            const typeOptions = form.querySelectorAll('input[name="post_type"]');
+            for (let opt of typeOptions) {
+                if (opt.checked) {
+                    payload.post_type = opt.value;
+                    break;
+                }
+            }
+        }
 
         if (fileUploaded) {
             payload.file_path = file_path;

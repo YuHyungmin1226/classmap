@@ -43,3 +43,4 @@ class Flag(db.Model):
     thumbnail_path = db.Column(db.String(255), nullable=True) # Path to generated thumbnail
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     author_name = db.Column(db.String(100), nullable=False, default="Participant")
+    post_type = db.Column(db.String(20), nullable=False, default='normal') # 'normal', 'notice', 'objective'
