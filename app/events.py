@@ -40,6 +40,11 @@ def on_add_flag(data):
     author_name = data.get('author_name', 'Participant')
     client_id = data.get('client_id')
     post_type = data.get('post_type', 'normal')
+    
+    # Permission check: Only admin can create notice or objective
+    is_admin = session.get('admin_logged_in', False)
+    if not is_admin and post_type in ['notice', 'objective']:
+        post_type = 'normal'
 
     new_flag = Flag(
         session_id=session_id,
@@ -83,9 +88,19 @@ def on_edit_flag(data):
         is_admin = session.get('admin_logged_in', False)
         requester_client_id = data.get('client_id')
         
-        if not is_admin and flag.client_id != requester_client_id:
-            print(f"Unauthorized edit attempt for flag {flag_id} by client {requester_client_id}")
-            return
+        # Permission check:
+        # 1. If it's a notice or objective, ONLY admin can edit.
+        # 2. Otherwise, admin OR the owner can edit.
+        is_special_type = flag.post_type in ['notice', 'objective']
+        
+        if is_special_type:
+            if not is_admin:
+                print(f"Unauthorized edit attempt for special type {flag.post_type} by client {requester_client_id}")
+                return
+        else:
+            if not is_admin and flag.client_id != requester_client_id:
+                print(f"Unauthorized edit attempt for flag {flag_id} by client {requester_client_id}")
+                return
             
         flag.text_content = data.get('text_content', flag.text_content)
         flag.post_type = data.get('post_type', flag.post_type)
@@ -123,13 +138,22 @@ def on_delete_flag(data):
         flag = Flag.query.get(flag_id)
         
     if flag:
-        # Authorization check: Admin or the person who created the flag
+        # Permission check:
+        # 1. If it's a notice or objective, ONLY admin can delete.
+        # 2. Otherwise, admin OR the owner can delete.
         is_admin = session.get('admin_logged_in', False)
         requester_client_id = data.get('client_id')
         
-        if not is_admin and flag.client_id != requester_client_id:
-            print(f"Unauthorized delete attempt for flag {flag_id} by client {requester_client_id}")
-            return
+        is_special_type = flag.post_type in ['notice', 'objective']
+        
+        if is_special_type:
+            if not is_admin:
+                print(f"Unauthorized delete attempt for special type {flag.post_type} by client {requester_client_id}")
+                return
+        else:
+            if not is_admin and flag.client_id != requester_client_id:
+                print(f"Unauthorized delete attempt for flag {flag_id} by client {requester_client_id}")
+                return
  
         db.session.delete(flag)
         db.session.commit()
