@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="header-title">Join a {{ 'ClassMap' if current_type == 'classmap' else ('ClassDraw' if current_type == 'classdraw' else 'ClassWrite') }} Class</h1>
+    <h1 class="header-title">Join a {{ 'ClassMap' if current_type == 'classmap' else ('ClassDraw' if current_type == 'classdraw' else ('ClassQuiz' if current_type == 'classquiz' else 'ClassWrite')) }} Class</h1>
     <div class="header-actions">
         <a href="{{ url_for('main.index') }}" class="btn btn-secondary btn-sm">← Back</a>
     </div>
@@ -14,7 +14,7 @@
         {% for c in classes %}
             <div class="card session-card">
                 <h3>{{ c.name }}</h3>
-                <p style="margin-bottom: 10px; font-weight: 600; color: #6366f1;">Type: {{ 'ClassMap' if c.class_type == 'classmap' else ('ClassDraw' if c.class_type == 'classdraw' else 'ClassWrite') }}</p>
+                <p style="margin-bottom: 10px; font-weight: 600; color: #6366f1;">Type: {{ 'ClassMap' if c.class_type == 'classmap' else ('ClassDraw' if c.class_type == 'classdraw' else ('ClassQuiz' if c.class_type == 'classquiz' else 'ClassWrite')) }}</p>
                 <p>Status: <span class="badge active">Active</span></p>
                 <a href="{{ url_for('main.view_class', class_id=c.id) }}" class="btn btn-primary">View Sessions</a>
             </div>

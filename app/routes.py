@@ -108,6 +108,14 @@ def close_session(session_id):
     db.session.commit()
     return redirect(url_for('main.admin_class', class_id=s.class_id))
 
+@main.route('/admin/class/<class_id>/quiz_results')
+def admin_class_quiz_results(class_id):
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('main.admin_login'))
+    c = ClassGroup.query.get_or_404(class_id)
+    sessions = Session.query.filter_by(class_id=class_id).all()
+    return render_template('class_quiz_results.html', class_group=c, sessions=sessions)
+
 @main.route('/admin/settings')
 def admin_settings():
     if not session.get('admin_logged_in'):
@@ -245,7 +253,88 @@ def view_session(session_id):
         return "This session is closed.", 403
         
     is_admin = session.get('admin_logged_in', False)
+    if s.class_group.class_type == 'classquiz':
+        return render_template('quiz_session.html', quiz_session=s, is_admin=is_admin)
     return render_template('map_session.html', map_session=s, is_admin=is_admin)
+
+@main.route('/admin/session/<session_id>/export_quiz')
+def export_quiz_excel(session_id):
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('main.admin_login'))
+    
+    from openpyxl import Workbook
+    from .models import QuizQuestion
+    
+    s = Session.query.get_or_404(session_id)
+    questions = QuizQuestion.query.filter_by(session_id=session_id).order_by(QuizQuestion.index).all()
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Quiz Questions"
+    
+    # Headers
+    headers = ['Idx', 'Type', 'Question', 'Options (split by |)', 'Correct Answer']
+    ws.append(headers)
+    
+    # Data
+    for q in questions:
+        ws.append([q.index, q.q_type, q.question, q.options, q.correct_answer])
+    
+    # Save to memory
+    memory_file = io.BytesIO()
+    wb.save(memory_file)
+    memory_file.seek(0)
+    
+    filename = f"quiz_{secure_filename(s.name)}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    return send_file(
+        memory_file,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
+
+@main.route('/admin/session/<session_id>/import_quiz', methods=['POST'])
+def import_quiz_excel(session_id):
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    from openpyxl import load_workbook
+    from .models import QuizQuestion
+    
+    try:
+        wb = load_workbook(file)
+        ws = wb.active
+        
+        # Optionally clear existing questions? User didn't specify, but usually expected.
+        # Let's keep existing for now or just append. 
+        # Actually, let's clear existing to make it a "sync".
+        QuizQuestion.query.filter_by(session_id=session_id).delete()
+        
+        # Skip header row
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row[2]: continue # Skip if no question text
+            
+            new_q = QuizQuestion(
+                session_id=session_id,
+                index=row[0] if row[0] is not None else 0,
+                q_type=row[1] if row[1] else 'choice',
+                question=str(row[2]),
+                options=str(row[3]) if row[3] else "",
+                correct_answer=str(row[4]) if row[4] else ""
+            )
+            db.session.add(new_q)
+        
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @main.route('/upload', methods=['POST'])
 def upload_file():

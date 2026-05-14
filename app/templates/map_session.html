@@ -801,6 +801,10 @@
         });
         
         socket.on('flag_edited', function(updatedFlag) {
+            // Update global list
+            const allIdx = allFlags.findIndex(f => f.id == updatedFlag.id);
+            if (allIdx !== -1) allFlags[allIdx] = updatedFlag;
+
             if (classType === 'classmap') {
                 const key = getGroupKey(parseFloat(updatedFlag.x), parseFloat(updatedFlag.y));
                 if (flagGroups[key]) {
