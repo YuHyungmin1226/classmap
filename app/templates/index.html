@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+    <h1>Join a Class</h1>
+    <p>Select your class below to see available sessions.</p>
+</div>
+
+<div class="sessions-container">
+    {% if classes %}
+        <div class="grid">
+        {% for c in classes %}
+            <div class="card session-card">
+                <h3>{{ c.name }}</h3>
+                <p>Status: <span class="badge active">Active</span></p>
+                <a href="{{ url_for('main.view_class', class_id=c.id) }}" class="btn btn-primary">View Sessions</a>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state card">
+            <p>No active classes available at the moment.</p>
+            <p>Please wait for the admin to create one.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

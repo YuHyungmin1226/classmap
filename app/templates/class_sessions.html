@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto;">
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">← Back to Classes</a>
+        <h1 style="margin: 0; text-align: right;">{{ class_group.name }} - Sessions</h1>
+    </div>
+    <p style="margin-top: 20px;">Select an active session below to participate.</p>
+</div>
+
+<div class="sessions-container">
+    {% if sessions %}
+        <div class="card" style="width: 100%; border: none; box-shadow: none; background: transparent; padding: 0;">
+            <ul class="session-list" style="list-style: none; padding: 0; margin: 0;">
+            {% for s in sessions %}
+                <li class="session-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div>
+                        <h3 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25em;">{{ s.name }}</h3>
+                        <p style="margin: 0; color: #64748b; font-size: 0.9em;">Status: <span class="badge active" style="font-size: 0.85em;">Active</span></p>
+                    </div>
+                    <a href="{{ url_for('main.view_session', session_id=s.id) }}" class="btn btn-primary" style="margin: 0; display: flex; align-items: center; justify-content: center;">Join Session</a>
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <div class="empty-state card">
+            <p>No active sessions available in this class right now.</p>
+            <p>Please wait for the admin to create one.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
